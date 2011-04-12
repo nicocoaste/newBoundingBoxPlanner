@@ -54,7 +54,7 @@ vector<float>  CnewBoundingBoxPlanner::phi_sampler(float x, float y, float yaw, 
     float dx, dy, dyaw;
     for(unsigned int i = 0; i < 100; i++) {
 	dx = (((float) rand())/((float) RAND_MAX + 1.0)*0.41*2 - 0.41);
-	dy = (lr_coef * ( ((float) rand())/((float) RAND_MAX + 1.0)*(0.41-0.16) + 0.16 ));
+	dy = (lr_coef * ( ((float) rand())/((float) RAND_MAX + 1.0)*(0.38-0.16) + 0.16 )); //0.38 != 0.41 => NOT CIRCULAR ANYMORE !!
 	dyaw = 0.0; //((float) rand())/((float) RAND_MAX + 1.0)*20.0*PI/180.0 - 10*PI/180.0;
 	if(dx*dx + dy*dy < 0.41*0.41 && (lr_coef * dy) > 0.16) {
 	    result[0] = x + (dx * cos(yaw) + dy * sin(yaw)) * zcoef; 
@@ -74,7 +74,7 @@ bool CnewBoundingBoxPlanner::phi_verifier(float dx, float dy, float dyaw, float 
     float lr_coef = right0_left1 ? -1.0 : 1.0; 
     float ddx = cos(yaw)*dx + sin(yaw)*dy;
     float ddy = sin(yaw)*dx - cos(yaw)*dy;
-    return (ddx*ddx + ddy*ddy < 0.37*0.37*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && abs(dyaw) < 10.0*PI/180.0);
+    return (ddx*ddx + ddy*ddy < 0.41*0.41*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && (lr_coef * ddy) < 0.38*zcoef && abs(dyaw) < 10.0*PI/180.0);
 }
 // ----------------------------------------------------------------------------
 bool CnewBoundingBoxPlanner::isStateValid(float xx, float yy, float zz, float yawy, 
