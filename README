@@ -1,0 +1,3 @@
+This is a cmake package; see cmake documentation to install.
+
+See ./unitTesting/unit.cpp to understand how to use the package.
