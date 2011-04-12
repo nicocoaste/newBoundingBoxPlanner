@@ -169,8 +169,8 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
     ob::RealVectorBounds bounds(3);
     bounds.setLow(0, -3.0);
     bounds.setHigh(0, 1.0);
-    bounds.setLow(1, -1.5);
-    bounds.setHigh(1, 1.5);
+    bounds.setLow(1, -2.0);
+    bounds.setHigh(1, 2.0);
     
     bounds.setLow(2, -0.99);
     bounds.setHigh(2, 0.99);
