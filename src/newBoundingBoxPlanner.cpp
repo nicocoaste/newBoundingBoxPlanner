@@ -45,7 +45,7 @@ float distanceQuery(PQP_Model &pqp_object, aiMatrix4x4 & ai_object_init_matrix, 
 	PQP_DistanceResult res;
 	PQP_Distance(&res,Renv,Tenv,&pqp_env,Robj,Tobj,&pqp_object,rel_err,abs_err);    
 	
-	return res.Distance();    
+	return res.Distance();
 }
 // ----------------------------------------------------------------------------
 vector<float>  CnewBoundingBoxPlanner::phi_sampler(float x, float y, float yaw, float zcoef, int right0_left1) { //0: we sample for the right foot, 1: we sample for the left foot
@@ -488,9 +488,9 @@ void CnewBoundingBoxPlanner::build_robot_footsteps (CnewSliderPG * sliderPG,
 
 	//sliding coefficients:	
 	if(i==1) stepsVect.push_back(0);
-	else stepsVect.push_back(-0.0);
+	else stepsVect.push_back(-1.6);
 	
-	stepsVect.push_back(-0.0);
+	stepsVect.push_back(-1.6);
 	
 	stepsVect.push_back( cos(radV)*(fprints_vector[i][0] - fprints_vector[i-1][0]) - sin(radV)*(fprints_vector[i][1] - fprints_vector[i-1][1])  );
 	    
