@@ -53,10 +53,10 @@ vector<float>  CnewBoundingBoxPlanner::phi_sampler(float x, float y, float yaw, 
     float lr_coef = right0_left1 ? -1.0 : 1.0;    
     float dx, dy, dyaw;
     for(unsigned int i = 0; i < 100; i++) {
-	dx = (((float) rand())/((float) RAND_MAX + 1.0)*0.41*2 - 0.41);
-	dy = (lr_coef * ( ((float) rand())/((float) RAND_MAX + 1.0)*(0.38-0.16) + 0.16 )); //0.38 != 0.41 => NOT CIRCULAR ANYMORE !!
+	dx = (((float) rand())/((float) RAND_MAX + 1.0)*0.40*2 - 0.40);
+	dy = (lr_coef * ( ((float) rand())/((float) RAND_MAX + 1.0)*(0.37-0.16) + 0.16 )); //0.37 != 0.40 => NOT CIRCULAR ANYMORE !!
 	dyaw = 0.0; //((float) rand())/((float) RAND_MAX + 1.0)*20.0*PI/180.0 - 10*PI/180.0;
-	if(dx*dx + dy*dy < 0.41*0.41 && (lr_coef * dy) > 0.16) {
+	if(dx*dx + dy*dy < 0.40*0.40 && (lr_coef * dy) > 0.16) {
 	    result[0] = x + (dx * cos(yaw) + dy * sin(yaw)) * zcoef; 
 	    result[1] = y + (dx * sin(yaw) - dy * cos(yaw)) * zcoef;
 	    result[2] = yaw + dyaw;
@@ -74,7 +74,7 @@ bool CnewBoundingBoxPlanner::phi_verifier(float dx, float dy, float dyaw, float 
     float lr_coef = right0_left1 ? -1.0 : 1.0; 
     float ddx = cos(yaw)*dx + sin(yaw)*dy;
     float ddy = sin(yaw)*dx - cos(yaw)*dy;
-    return (ddx*ddx + ddy*ddy < 0.41*0.41*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && (lr_coef * ddy) < 0.38*zcoef && abs(dyaw) < 10.0*PI/180.0);
+    return (ddx*ddx + ddy*ddy < 0.40*0.40*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && (lr_coef * ddy) < 0.37*zcoef && abs(dyaw) < 16.0*PI/180.0);
 }
 // ----------------------------------------------------------------------------
 bool CnewBoundingBoxPlanner::isStateValid(float xx, float yy, float zz, float yawy, 
@@ -94,13 +94,13 @@ bool CnewBoundingBoxPlanner::isStateValid(float xx, float yy, float zz, float ya
     float zcoefRIGHT = (zz + 1.0)/2.0;
     float zcoefLEFT = (zz - 1.0)/-2.0;
     
-    float xl = xx + ( -0.16 * sin(yawy)) * zcoefLEFT; 
-    float yl = yy - ( -0.16 * cos(yawy)) * zcoefLEFT; 
-    float xr = xx + ( 0.16 * sin(yawy)) * zcoefRIGHT; 
-    float yr = yy - ( 0.16 * cos(yawy)) * zcoefRIGHT;
-    
-    float resUp = distanceQuery(pqp_objectUPPER, ai_object_init_matrixUPPER, (xl + xr)/2.0, (yl + yr)/2.0, -yawy - PI/2.0, ai_env, pqp_env);
-    if(resUp <= 0.0001) return 0;
+//     float xl = xx + ( -0.16 * sin(yawy)) * zcoefLEFT; 
+//     float yl = yy - ( -0.16 * cos(yawy)) * zcoefLEFT; 
+//     float xr = xx + ( 0.16 * sin(yawy)) * zcoefRIGHT; 
+//     float yr = yy - ( 0.16 * cos(yawy)) * zcoefRIGHT;
+//     
+//     float resUp = distanceQuery(pqp_objectUPPER, ai_object_init_matrixUPPER, (xl + xr)/2.0, (yl + yr)/2.0, -yawy - PI/2.0, ai_env, pqp_env);
+//     if(resUp <= 0.0001) return 0;
     
     for(unsigned int k = 0; k < 18; k++) {
 	vector<float> vc = phi_sampler(xx, yy, yawy, zcoefRIGHT, 0);
@@ -218,7 +218,7 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
 
     planner->setup();
     
-    bool solved = planner->solve(40.0);
+    bool solved = planner->solve(10.0);
     
     if (solved)
     {

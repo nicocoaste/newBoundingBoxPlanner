@@ -158,24 +158,24 @@ namespace ompl
 		double x1 = state1->as<SE2plusStateManifold::StateType>()->getX();
 		double y1 = state1->as<SE2plusStateManifold::StateType>()->getY();
 // 		double z1 = state1->as<SE2plusStateManifold::StateType>()->getZ();
-// 		double yaw1 = state1->as<SE2plusStateManifold::StateType>()->getYaw();
+		double yaw1 = state1->as<SE2plusStateManifold::StateType>()->getYaw();
 		
 		double x2 = state2->as<SE2plusStateManifold::StateType>()->getX();
 		double y2 = state2->as<SE2plusStateManifold::StateType>()->getY();
 // 		double z2 = state2->as<SE2plusStateManifold::StateType>()->getZ();
-// 		double yaw2 = state2->as<SE2plusStateManifold::StateType>()->getYaw();
+		double yaw2 = state2->as<SE2plusStateManifold::StateType>()->getYaw();
 		
 		double dist = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
 // 		double zPenalty = abs(z2 - z1);
 // 		double crabPenalty = (abs((x2-x1)*sin(yaw1) - (y2-y1)*cos(yaw1)) + abs((x2-x1)*sin(yaw2) - (y2-y1)*cos(yaw2)))/2.0;
 // 		double crabPenalty = ( (x2-x1)*cos(yaw1) + (y2-y1)*sin(yaw1) < 0.0 
 // 				    || (x2-x1)*cos(yaw2) + (y2-y1)*sin(yaw2) < 0.0) ? 1000.0 : 0.0;
-// 		double backPenalty = (my_max(0,-((x2-x1)*cos(yaw1) + (y2-y1)*sin(yaw1))) + my_max(0,-((x2-x1)*cos(yaw2) + (y2-y1)*sin(yaw2))))/2.0;
+		double backPenalty = (my_max(0,-((x2-x1)*cos(yaw1) + (y2-y1)*sin(yaw1))) + my_max(0,-((x2-x1)*cos(yaw2) + (y2-y1)*sin(yaw2))))/2.0;
 // 		double backPenalty = ( (x2-x1)*cos(yaw1) + (y2-y1)*sin(yaw1) > 0.0 
 // 				    || (x2-x1)*cos(yaw2) + (y2-y1)*sin(yaw2) > 0.0) ? 1000.0 : 0.0;
-// 		double turnPenalty = my_min(my_min(abs(yaw2 - yaw1), abs(yaw2 - yaw1 + 2*PI)), abs(yaw2 - yaw1 - 2*PI));
+		double turnPenalty = my_min(my_min(abs(yaw2 - yaw1), abs(yaw2 - yaw1 + 2*PI)), abs(yaw2 - yaw1 - 2*PI));
 		
-		return ( dist );
+		return ( dist + backPenalty + turnPenalty);
 	    }
 
             virtual State* allocState(void) const;

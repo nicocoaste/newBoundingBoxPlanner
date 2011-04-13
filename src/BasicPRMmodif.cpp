@@ -160,6 +160,7 @@ namespace ompl
 
 bool ompl::geometric::BasicPRMmodif::solve(const base::PlannerTerminationCondition &ptc)
 {
+        
     pis_.checkValidity();
     base::GoalSampleableRegion *goal = dynamic_cast<base::GoalSampleableRegion*>(pdef_->getGoal().get());
 
@@ -213,11 +214,11 @@ bool ompl::geometric::BasicPRMmodif::solve(const base::PlannerTerminationConditi
         }
 
         // if there already is a solution, construct it
-        if (haveSolution(startM, goalM, &solEndpoints))
-        {
-            constructSolution(solEndpoints.first, solEndpoints.second);
-            break;
-        }
+//         if (haveSolution(startM, goalM, &solEndpoints))
+//         {
+//             constructSolution(solEndpoints.first, solEndpoints.second);
+//             break;
+//         }
         // othewise, spend some time building a roadmap
         else
         {
@@ -228,13 +229,18 @@ bool ompl::geometric::BasicPRMmodif::solve(const base::PlannerTerminationConditi
             else
                 growRoadmap(startM, goalM, ptc, xstate);
             // if a solution has been found, construct it
-            if (haveSolution(startM, goalM, &solEndpoints))
-            {
-                constructSolution(solEndpoints.first, solEndpoints.second);
-                break;
-            }
+//             if (haveSolution(startM, goalM, &solEndpoints))
+//             {
+//                 constructSolution(solEndpoints.first, solEndpoints.second);
+//                 break;
+//             }
         }
     }
+    if (haveSolution(startM, goalM, &solEndpoints))
+    {
+	constructSolution(solEndpoints.first, solEndpoints.second);
+    }
+    
     si_->freeState(xstate);
 
     msg_.inform("Created %u states", milestones_.size() - nrStartStates);
