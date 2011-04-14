@@ -1,8 +1,32 @@
 /*
- *  Copyright AIST-CNRS Joint Robotics Laboratory
- *  Author: Nicolas Perrin
- *
- */
+* Copyright 2010, 2011
+*
+* Nicolas Perrin,
+* Olivier Stasse,
+* Florent Lamiraux,
+* Eiichi Yoshida
+*
+*
+* JRL/LAAS, CNRS/AIST
+*
+* This file is part of newBoundingBoxPlanner.
+* newBoundingBoxPlanner is a free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* newBoundingBoxPlanner is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Lesser Public License for more details.
+* You should have received a copy of the GNU Lesser General Public License
+* along with newSliderPG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Research carried out within the scope of the Associated
+* International Laboratory: Joint Japanese-French Robotics
+* Laboratory (JRL)
+*
+*/
 
 #include "newBoundingBoxPlanner/newBoundingBoxPlanner.h"
 #include "BasicPRMmodif.h"
@@ -425,7 +449,7 @@ int CnewBoundingBoxPlanner::build_lowerBBOX_trajectory(
     
     vector<float> vfpi(3);
     //compute the starting config. for the lower bounding box:
-    vfpi[0] = start_pos_and_orient.x + sin(start_pos_and_orient.theta) * -0.095; //TODO: this is hrp2-dependent: WRONG INITIALIZATION
+    vfpi[0] = start_pos_and_orient.x + sin(start_pos_and_orient.theta) * -0.095; //TODO: this is hrp2-dependent: WRONG INITIALIZATION (and it should also depend on the first support foot)
     vfpi[1] = start_pos_and_orient.y - cos(start_pos_and_orient.theta) * -0.095; //TODO: this is hrp2-dependent
     vfpi[2] = start_pos_and_orient.theta;
     fprints_vector.push_back(vfpi);
@@ -508,7 +532,7 @@ void CnewBoundingBoxPlanner::build_robot_footsteps (CnewSliderPG * sliderPG,
     }
 
     filebuf fb;
-    fb.open (pg_config,ios::in);  //TODO: take the filename in input
+    fb.open (pg_config,ios::in); 
     istream is(&fb);
     string bufstring;
 
