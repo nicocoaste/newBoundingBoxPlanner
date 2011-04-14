@@ -13,8 +13,10 @@ SET(libdyn_src
 # ex : toto.cpp 
 # ...    
   newBoundingBoxPlanner.cpp
+  KPIECE1.cpp
   BasicPRMmodif.cpp
   SE2plusStateManifold.cpp
+  ./KPIECE1.h
   ./BasicPRMmodif.h
   ./SE2plusStateManifold.h
   ./MatVec.h

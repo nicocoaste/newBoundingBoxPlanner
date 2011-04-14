@@ -67,8 +67,17 @@
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/PathSimplifier.h>
 
+#include <ompl/control/SpaceInformation.h>
+#include <ompl/base/GoalState.h>
+#include <ompl/control/manifolds/RealVectorControlManifold.h>
+#include <ompl/control/planners/kpiece/KPIECE1.h>
+#include <ompl/control/planners/rrt/RRT.h>
+#include <ompl/control/SimpleSetup.h>
+#include <ompl/config.h>
+
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
+namespace oc = ompl::control;
 
 using namespace std;
 

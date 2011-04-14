@@ -29,6 +29,7 @@
 */
 
 #include "newBoundingBoxPlanner/newBoundingBoxPlanner.h"
+#include "KPIECE1.h"
 #include "BasicPRMmodif.h"
 #include "SE2plusStateManifold.h"
 #include "MatVec.h"
@@ -183,6 +184,28 @@ bool CnewBoundingBoxPlanner::isStateValid_default(const ob::State *state) {
 bool testt(const ob::State * state) {
     return true;
 }
+
+void propagate(const ob::State *start, const oc::Control *control, const double duration, ob::State *result)
+{
+     const ob::SE2plusStateManifold::StateType *se2state = start->as<ob::SE2plusStateManifold::StateType>();
+     const ob::RealVectorStateManifold::StateType *pos = se2state->as<ob::RealVectorStateManifold::StateType>(0);
+     const ob::SO2StateManifold::StateType *rot = se2state->as<ob::SO2StateManifold::StateType>(1);
+     const oc::RealVectorControlManifold::ControlType *rctrl = control->as<oc::RealVectorControlManifold::ControlType>();
+ 
+     result->as<ob::SE2plusStateManifold::StateType>()->as<ob::RealVectorStateManifold::StateType>(0)->values[0] =
+         (*rctrl)[0] > 0 ? (*pos)[0] + (*rctrl)[0] * duration * cos(rot->value) : (*pos)[0];
+ 
+     result->as<ob::SE2plusStateManifold::StateType>()->as<ob::RealVectorStateManifold::StateType>(0)->values[1] =
+         (*rctrl)[0] > 0 ? (*pos)[1] + (*rctrl)[0] * duration * sin(rot->value) : (*pos)[1];
+	 
+     result->as<ob::SE2plusStateManifold::StateType>()->as<ob::RealVectorStateManifold::StateType>(0)->values[2] =
+         aisgl_min(0.99, aisgl_max(-0.99, (*pos)[1] + (*rctrl)[1] * duration));
+ 
+     result->as<ob::SE2plusStateManifold::StateType>()->as<ob::SO2StateManifold::StateType>(1)->value =
+         (*rctrl)[0] > 0 ? rot->value : rot->value + (2.0 - (*rctrl)[0]) * duration;
+}
+
+
 // ----------------------------------------------------------------------------
 void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startSE2, SE2 & goalSE2)
 { 
@@ -201,10 +224,22 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
 
     manifold->as<ob::SE2plusStateManifold>()->setBounds(bounds);
 
-    ob::SpaceInformationPtr si(new ob::SpaceInformation(manifold));
+    // create a control manifold
+    oc::ControlManifoldPtr cmanifold(new oc::RealVectorControlManifold(manifold, 3));
+    // set the bounds for the control manifold
+    ob::RealVectorBounds cbounds(3);
+    cbounds.setLow(-4.0);
+    cbounds.setHigh(4.0);
+    
+    cmanifold->as<oc::RealVectorControlManifold>()->setBounds(cbounds);
+    // set the state propagation routine
+    cmanifold->setPropagationFunction(boost::bind(&propagate, _1, _2, _3, _4));
+    
+    oc::SpaceInformationPtr si(new oc::SpaceInformation(manifold, cmanifold));
 
+//     si->setStateValidityChecker(boost::bind(&CnewBoundingBoxPlanner::isStateValid_default, this, _1));
     si->setStateValidityChecker(boost::bind(&CnewBoundingBoxPlanner::isStateValid_default, this, _1));
-    si->setStateValidityCheckingResolution(0.03);
+//     si->setStateValidityCheckingResolution(0.03);
     
     ob::ScopedState<ob::SE2plusStateManifold> start(manifold);
 //     start.random(); 
@@ -233,10 +268,16 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
 
     ob::ProblemDefinitionPtr pdef(new ob::ProblemDefinition(si));
 
-    pdef->setStartAndGoalStates(start, goal);
+    pdef->setStartAndGoalStates(start, goal, 0.1);
     
 //  ob::PlannerPtr planner(new og::RRTConnect(si));
-    ob::PlannerPtr planner(new og::BasicPRMmodif(si));
+//     ob::PlannerPtr planner(new og::BasicPRMmodif(si));
+// 	
+//     planner->setProblemDefinition(pdef);
+// 
+//     planner->setup();
+    
+    ob::PlannerPtr planner(new oc::KPIECE1(si));
 	
     planner->setProblemDefinition(pdef);
 
