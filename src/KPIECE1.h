@@ -1,7 +1,7 @@
 /*********************************************************************
 * Software License Agreement (BSD License)
 *
-*  Copyright (c) 2010, Rice University
+*  Copyright (c) 2008, Willow Garage, Inc.
 *  All rights reserved.
 *
 *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
 *     copyright notice, this list of conditions and the following
 *     disclaimer in the documentation and/or other materials provided
 *     with the distribution.
-*   * Neither the name of the Rice University nor the names of its
+*   * Neither the name of the Willow Garage nor the names of its
 *     contributors may be used to endorse or promote products derived
 *     from this software without specific prior written permission.
 *
@@ -34,22 +34,24 @@
 
 /* Author: Ioan Sucan */
 
-#ifndef OMPL_CONTROL_PLANNERS_KPIECE_KPIECE1_
-#define OMPL_CONTROL_PLANNERS_KPIECE_KPIECE1_
+#ifndef OMPL_GEOMETRIC_PLANNERS_KPIECE_KPIECE1_
+#define OMPL_GEOMETRIC_PLANNERS_KPIECE_KPIECE1_
 
-#include "ompl/control/planners/PlannerIncludes.h"
+#include "ompl/geometric/planners/PlannerIncludes.h"
 #include "ompl/base/ProjectionEvaluator.h"
 #include "ompl/datastructures/GridB.h"
+#include "ompl/geometric/ik/HCIK.h"
 #include <vector>
 
 namespace ompl
 {
 
-    namespace control
+    namespace geometric
     {
 
+
         /**
-           @anchor cKPIECE1
+           @anchor gKPIECE1
 
            @par Short description
            KPIECE is a tree-based planner that uses a discretization
@@ -66,7 +68,6 @@ namespace ompl
            set, the planner will attempt to use the default projection
            associated to the state manifold. An exception is thrown if
            no default projection is available either.
-           This implementation is intended for systems with differential constraints.
 
            @par External documentation
            I.A. Şucan and L.E. Kavraki, Kinodynamic motion planning by interior-exterior cell exploration,
@@ -74,25 +75,28 @@ namespace ompl
            <a href="http://ioan.sucan.ro/files/pubs/wafr2008.pdf">[PDF]</a>
         */
 
-        /** \brief Kinodynamic Planning by Interior-Exterior Cell Exploration */
-        class KPIECE1 : public base::Planner
+        /** \brief Kinematic Planning by Interior-Exterior Cell Exploration */
+        class KPIECE1modif : public base::Planner
         {
         public:
 
             /** \brief Constructor */
-            KPIECE1(const SpaceInformationPtr &si) : base::Planner(si, "KPIECE1")
+            KPIECE1modif(const base::SpaceInformationPtr &si) : base::Planner(si, "KPIECE1"),
+                                                           hcik_(si)
             {
                 type_ = base::PLAN_TO_GOAL_ANY;
 
-                siC_ = si.get();
                 goalBias_ = 0.05;
-                selectBorderFraction_ = 0.7;
-                badScoreFactor_ = 0.3;
+                selectBorderFraction_ = 0.9;
+                badScoreFactor_ = 0.5;
                 goodScoreFactor_ = 0.9;
+                minValidPathFraction_ = 0.2;
+                maxDistance_ = 0.0;
                 tree_.grid.onCellUpdate(computeImportance, NULL);
+                hcik_.setMaxImproveSteps(50);
             }
 
-            virtual ~KPIECE1(void)
+            virtual ~KPIECE1modif(void)
             {
                 freeMemory();
             }
@@ -101,7 +105,9 @@ namespace ompl
 
             virtual void clear(void);
 
-            /** In the process of randomly selecting states in the state
+            /** \brief Set the goal bias.
+
+                In the process of randomly selecting states in the state
                 space to attempt to go towards, the algorithm may in fact
                 choose the actual goal state, if it knows it, with some
                 probability. This probability is a real number between 0.0
@@ -113,10 +119,26 @@ namespace ompl
                 goalBias_ = goalBias;
             }
 
-            /** Get the goal bias the planner is using */
+            /** \brief Get the goal bias the planner is using */
             double getGoalBias(void) const
             {
                 return goalBias_;
+            }
+
+            /** \brief Set the range the planner is supposed to use.
+
+                This parameter greatly influences the runtime of the
+                algorithm. It represents the maximum length of a
+                motion to be added in the tree of motions. */
+            void setRange(double distance)
+            {
+                maxDistance_ = distance;
+            }
+
+            /** \brief Get the range the planner is using */
+            double getRange(void) const
+            {
+                return maxDistance_;
             }
 
             /** \brief Set the fraction of time for focusing on the
@@ -137,6 +159,22 @@ namespace ompl
                 return selectBorderFraction_;
             }
 
+            /** \brief When extending a motion, the planner can decide
+                to keep the first valid part of it, even if invalid
+                states are found, as long as the valid part represents
+                a sufficiently large fraction from the original
+                motion. This function sets the minimum acceptable
+                fraction (between 0 and 1). */
+            void setMinValidPathFraction(double fraction)
+            {
+                minValidPathFraction_ = fraction;
+            }
+
+            /** \brief Get the value of the fraction set by setMinValidPathFraction() */
+            double getMinValidPathFraction(void) const
+            {
+                return minValidPathFraction_;
+            }
 
             /** \brief When extending a motion from a cell, the
                 extension can be successful or it can fail.  If the
@@ -185,6 +223,7 @@ namespace ompl
             }
 
             virtual void setup(void);
+
             virtual void getPlannerData(base::PlannerData &data) const;
 
         protected:
@@ -194,12 +233,12 @@ namespace ompl
             {
             public:
 
-                Motion(void) : state(NULL), control(NULL), steps(0), parent(NULL)
+                Motion(void) : state(NULL), parent(NULL)
                 {
                 }
 
-                /** \brief Constructor that allocates memory for the state and the control */
-                Motion(const SpaceInformation *si) : state(si->allocState()), control(si->allocControl()), steps(0), parent(NULL)
+                /** \brief Constructor that allocates memory for the state */
+                Motion(const base::SpaceInformationPtr &si) : state(si->allocState()), parent(NULL)
                 {
                 }
 
@@ -209,12 +248,6 @@ namespace ompl
 
                 /** \brief The state contained by this motion */
                 base::State       *state;
-
-                /** \brief The control contained by this motion */
-                Control           *control;
-
-                /** \brief The number of steps the control is applied for */
-                unsigned int       steps;
 
                 /** \brief The parent motion in the exploration tree */
                 Motion            *parent;
@@ -237,7 +270,7 @@ namespace ompl
 
                 /** \brief A measure of coverage for this cell. For
                     this implementation, this is the sum of motion
-                    durations */
+                    lengths */
                 double               coverage;
 
                 /** \brief The number of times this cell has been
@@ -260,6 +293,8 @@ namespace ompl
                 structure, to order cells by importance */
             struct OrderCellsByImportance
             {
+
+                /** \brief Order function */
                 bool operator()(const CellData * const a, const CellData * const b) const
                 {
                     return a->importance > b->importance;
@@ -288,7 +323,7 @@ namespace ompl
                 unsigned int iteration;
             };
 
-            /** \brief This function is provided as a calback to the
+            /** \brief This function is provided as a callback to the
                 grid datastructure to update the importance of a
                 cell */
             static void computeImportance(Grid::Cell *cell, void*)
@@ -321,45 +356,51 @@ namespace ompl
                 to cells on the boundary of the grid.*/
             bool selectMotion(Motion* &smotion, Grid::Cell* &scell);
 
-            /** \brief When generated motions are to be added to the tree of motions, they often need to be split, so they don't cross cell boundaries.
-                Given that a motion starts out in the cell \e origin and it crosses the cells in \e coords[\e index] through \e coords[\e last] (inclusively),
-                return the index of the state to be used in the next part of the motion (that is within a cell). This will be a value between \e index and \e last. */
-            unsigned int findNextMotion(const Grid::Coord &origin, const std::vector<Grid::Coord> &coords, unsigned int index, unsigned int last);
+            /** \brief A manifold sampler */
+            base::ManifoldStateSamplerPtr              sampler_;
 
-            /** \brief A control sampler */
-            ControlSamplerPtr             controlSampler_;
+            /** \brief A hill climbing algorithm used to find states
+                closer to the goal */
+            HCIK                                       hcik_;
 
             /** \brief The tree datastructure */
-            TreeData                      tree_;
+            TreeData                                   tree_;
 
-            /** \brief The base::SpaceInformation cast as control::SpaceInformation, for convenience */
-            const SpaceInformation       *siC_;
 
             /** \brief This algorithm uses a discretization (a grid)
                 to guide the exploration. The exploration is imposed
                 on a projection of the state space. */
-            base::ProjectionEvaluatorPtr  projectionEvaluator_;
+            base::ProjectionEvaluatorPtr               projectionEvaluator_;
+
+            /** \brief When extending a motion, the planner can decide
+                to keep the first valid part of it, even if invalid
+                states are found, as long as the valid part represents
+                a sufficiently large fraction from the original
+                motion */
+            double                                     minValidPathFraction_;
 
             /** \brief When extending a motion from a cell, the
                 extension can be successful. If it is, the score of the
                 cell is multiplied by this factor. */
-            double                        goodScoreFactor_;
+            double                                     goodScoreFactor_;
 
             /** \brief When extending a motion from a cell, the
                 extension can fail. If it is, the score of the cell is
                 multiplied by this factor. */
-            double                        badScoreFactor_;
-
+            double                                     badScoreFactor_;
 
             /** \brief The fraction of time to focus exploration on
                 the border of the grid. */
-            double                        selectBorderFraction_;
+            double                                     selectBorderFraction_;
 
             /** \brief The fraction of time the goal is picked as the state to expand towards (if such a state is available) */
-            double                        goalBias_;
+            double                                     goalBias_;
+
+            /** \brief The maximum length of a motion to be added to a tree */
+            double                                     maxDistance_;
 
             /** \brief The random number generator */
-            RNG                           rng_;
+            RNG                                        rng_;
         };
 
     }
