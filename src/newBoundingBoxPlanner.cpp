@@ -30,6 +30,7 @@
 
 #include "newBoundingBoxPlanner/newBoundingBoxPlanner.h"
 #include "KPIECE1.h"
+#include "SBL.h"
 #include "BasicPRMmodif.h"
 #include "SE2plusStateManifold.h"
 #include "MatVec.h"
@@ -243,7 +244,7 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
 // 
 //     planner->setup();
     
-    ob::PlannerPtr planner(new og::KPIECE1modif(si));
+    ob::PlannerPtr planner(new og::SBLmodif(si));
 	
     planner->setProblemDefinition(pdef);
 

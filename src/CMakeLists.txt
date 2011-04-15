@@ -14,9 +14,11 @@ SET(libdyn_src
 # ...    
   newBoundingBoxPlanner.cpp
   KPIECE1.cpp
+  SBL.cpp
   BasicPRMmodif.cpp
   SE2plusStateManifold.cpp
   ./KPIECE1.h
+  ./SBL.h
   ./BasicPRMmodif.h
   ./SE2plusStateManifold.h
   ./MatVec.h
