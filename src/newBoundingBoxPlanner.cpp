@@ -29,6 +29,7 @@
 */
 
 #include "newBoundingBoxPlanner/newBoundingBoxPlanner.h"
+#include "RRTConnectmodif.h"
 #include "KPIECE1.h"
 #include "SBL.h"
 #include "BasicPRMmodif.h"
@@ -244,7 +245,7 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
 // 
 //     planner->setup();
     
-    ob::PlannerPtr planner(new og::SBLmodif(si));
+    ob::PlannerPtr planner(new og::RRTConnectmodif(si));
 	
     planner->setProblemDefinition(pdef);
 

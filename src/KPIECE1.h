@@ -34,8 +34,8 @@
 
 /* Author: Ioan Sucan */
 
-#ifndef OMPL_GEOMETRIC_PLANNERS_KPIECE_KPIECE1_
-#define OMPL_GEOMETRIC_PLANNERS_KPIECE_KPIECE1_
+#ifndef OMPL_GEOMETRIC_PLANNERS_KPIECE_KPIECE1_MODIF
+#define OMPL_GEOMETRIC_PLANNERS_KPIECE_KPIECE1_MODIF
 
 #include "ompl/geometric/planners/PlannerIncludes.h"
 #include "ompl/base/ProjectionEvaluator.h"
