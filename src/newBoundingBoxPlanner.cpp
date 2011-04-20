@@ -231,6 +231,13 @@ bool testt(const ob::State * state) {
 void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startSE2, SE2 & goalSE2)
 { 
     
+    discrete_phi_trajectory.clear();
+    footprint_matrixes.clear();
+    footprint_vector.clear();
+    continuous_phi_trajectory.clear();
+    lowerBBOXTrajectory.clear();
+    whichlowerBBOX.clear();    
+    
     // construct the manifold we are planning in    
     ob::StateManifoldPtr manifold(new ob::SE2plusStateManifold()); 
     
