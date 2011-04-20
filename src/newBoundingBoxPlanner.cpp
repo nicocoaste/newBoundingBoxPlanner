@@ -112,7 +112,7 @@ bool CnewBoundingBoxPlanner::phi_verifier(float dx, float dy, float dyaw, float 
     return (ddx*ddx + ddy*ddy < 0.40*0.40*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && (lr_coef * ddy) < 0.37*zcoef && abs(dyaw) < 16.0*PI/180.0);
 }
 // ----------------------------------------------------------------------------
-bool CnewBoundingBoxPlanner::isStateValid(float xx, float yy, float zz, float yawy, 
+bool CnewBoundingBoxPlanner::isStateValid(int repeat, float xx, float yy, float zz, float yawy, 
 		  PQP_Model &pqp_objectLOWER, 
 		  PQP_Model &pqp_objectUPPER,
 		  aiMatrix4x4 & ai_object_init_matrixLOWER, 
@@ -137,7 +137,7 @@ bool CnewBoundingBoxPlanner::isStateValid(float xx, float yy, float zz, float ya
 //     float resUp = distanceQuery(pqp_objectUPPER, ai_object_init_matrixUPPER, (xl + xr)/2.0, (yl + yr)/2.0, -yawy - PI/2.0, ai_env, pqp_env);
 //     if(resUp <= 0.0001) return 0;
     
-    for(unsigned int k = 0; k < 18; k++) {
+    for(int k = 0; k < repeat; k++) {
 	vector<float> vc = phi_sampler(xx, yy, yawy, zcoefRIGHT, 0);
 	x = vc[0]; 
 	y = vc[1];
@@ -149,7 +149,7 @@ bool CnewBoundingBoxPlanner::isStateValid(float xx, float yy, float zz, float ya
 	    break;
 	}
     }
-    for(unsigned int k = 0; k < 18; k++) {
+    for(int k = 0; k < repeat; k++) {
 	vector<float> vc = phi_sampler(xx, yy, yawy, zcoefLEFT, 1);
 	x = vc[0]; 
 	y = vc[1];
@@ -166,7 +166,40 @@ bool CnewBoundingBoxPlanner::isStateValid(float xx, float yy, float zz, float ya
     
     return 0;        
 }
-bool CnewBoundingBoxPlanner::isStateValid(const ob::State *state, 
+
+SE2 CnewBoundingBoxPlanner::randomGoal() {
+ 
+    SE2 ret_config;
+    ret_config.x = 0;
+    ret_config.y = 0;
+    ret_config.theta = 0;
+    for(int i = 0; i < 100; i++) {
+	float xx =  ((float) rand())/((float) RAND_MAX + 1.0)*4.0 - 3.0;
+	float yy =  ((float) rand())/((float) RAND_MAX + 1.0)*4.0 - 2.0;
+	float zz = 0;
+	float yawy = ((float) rand())/((float) RAND_MAX + 1.0)*2*PI - PI;    
+	
+	bool decid = true;
+	for(unsigned int u = 0; u < 50; u++) {
+	    if( ! isStateValid(18, xx, yy, zz, yawy, pqp_lowerBBOX, pqp_upperBBOX, lowerBBOX_init_matrix, upperBBOX_init_matrix, ai_env, pqp_env))
+		decid = false;    
+	}
+	
+	if(decid) {
+	    ret_config.x = xx;
+	    ret_config.y = yy;
+	    ret_config.theta = yawy;    
+	    return ret_config;    
+	}   
+	
+    }   
+    cout << "Random Goal not found" << endl;
+    return ret_config;    
+}
+
+bool CnewBoundingBoxPlanner::isStateValid(
+		  int repeat,
+		  const ob::State *state, 
 		  PQP_Model &pqp_objectLOWER, 
 		  PQP_Model &pqp_objectUPPER, 
 		  aiMatrix4x4 & ai_object_init_matrixLOWER, 
@@ -182,12 +215,12 @@ bool CnewBoundingBoxPlanner::isStateValid(const ob::State *state,
     
     float yawy = s->getYaw();
  
-    return isStateValid(xx, yy, zz, yawy, pqp_objectLOWER, pqp_objectUPPER, ai_object_init_matrixLOWER, ai_object_init_matrixUPPER, ai_env, pqp_env);
+    return isStateValid(repeat, xx, yy, zz, yawy, pqp_objectLOWER, pqp_objectUPPER, ai_object_init_matrixLOWER, ai_object_init_matrixUPPER, ai_env, pqp_env);
     
 }
 bool CnewBoundingBoxPlanner::isStateValid_default(const ob::State *state) {
     
-    return isStateValid(state, pqp_lowerBBOX, pqp_upperBBOX, lowerBBOX_init_matrix, upperBBOX_init_matrix, ai_env, pqp_env);
+    return isStateValid(18, state, pqp_lowerBBOX, pqp_upperBBOX, lowerBBOX_init_matrix, upperBBOX_init_matrix, ai_env, pqp_env);
     
 }
 
@@ -201,7 +234,7 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
     // construct the manifold we are planning in    
     ob::StateManifoldPtr manifold(new ob::SE2plusStateManifold()); 
     
-    ob::RealVectorBounds bounds(3);
+    ob::RealVectorBounds bounds(3); //TODO: change this, since the bounds should depend on the context.
     bounds.setLow(0, -3.0);
     bounds.setHigh(0, 1.0);
     bounds.setLow(1, -2.0);
@@ -561,13 +594,27 @@ int CnewBoundingBoxPlanner::progressive_update_lowerBBOX_config(
     hs1.vp_config = sliderPG->get_vp_config();
     hs2.vp_config = sliderPG->get_vp_config();
     
-    hs1.pos_and_orient.x = (xcyl_prevprev - xcyl_prev) * cos(yawInit) - (ycyl_prevprev - ycyl_prev) * sin(yawInit);
-    hs1.pos_and_orient.y = (xcyl_prevprev - xcyl_prev) * sin(yawInit) + (ycyl_prevprev - ycyl_prev) * cos(yawInit);
-    hs1.pos_and_orient.theta = yawpreInit - yawInit;     
+    float A, B, C, D;
+    
+    hs1.pos_and_orient.x = (xcyl_prevprev - xcyl_prev) * cos(-yawInit) - (ycyl_prevprev - ycyl_prev) * sin(-yawInit);
+    hs1.pos_and_orient.y = (xcyl_prevprev - xcyl_prev) * sin(-yawInit) + (ycyl_prevprev - ycyl_prev) * cos(-yawInit);
+    A = yawpreInit - yawInit + 2*PI;
+    B = yawpreInit - yawInit - 2*PI;
+    C = yawpreInit - yawInit;
+    if(abs(A) < abs(B) && abs(A) < abs(C)) D = A;
+    else if(abs(B) < abs(A) && abs(B) < abs(C)) D = B;
+    else D = C;   
+    hs1.pos_and_orient.theta = D;
     
     hs2.pos_and_orient.x = (saveRes[0] - xcyl_prev) * cos(-yawInit) - (saveRes[1] - ycyl_prev) * sin(-yawInit);
     hs2.pos_and_orient.y = (saveRes[0] - xcyl_prev) * sin(-yawInit) + (saveRes[1] - ycyl_prev) * cos(-yawInit);
-    hs2.pos_and_orient.theta = saveRes[2] - yawInit;   
+    A = saveRes[2] - yawInit + 2*PI;
+    B = saveRes[2] - yawInit - 2*PI;
+    C = saveRes[2] - yawInit;
+    if(abs(A) < abs(B) && abs(A) < abs(C)) D = A;
+    else if(abs(B) < abs(A) && abs(B) < abs(C)) D = B;
+    else D = C;   
+    hs2.pos_and_orient.theta = D;  
     
     hs1.ft_dim = sliderPG->get_ft_dim();
     hs2.ft_dim = sliderPG->get_ft_dim();
@@ -662,7 +709,7 @@ int CnewBoundingBoxPlanner::build_lowerBBOX_trajectory(
 	    which_lower_bounding_box[k] = which_lower_bounding_box[k-1];
 	    lower_bounding_box_trajectory[k] = lower_bounding_box_trajectory[k-1];
 	}
-    }   
+    } 
     
     return 1;
 }
@@ -676,6 +723,8 @@ int CnewBoundingBoxPlanner::progressive_build_lowerBBOX_trajectory(
 			    const char * pg_config,
 			    LoR firstsupportfoot,
 			    SE2 & start_pos_and_orient,
+			    SE2 & firstLeftFoot,
+			    SE2 & firstRightFoot,
 			    vector< vector<float> > & c_phi_trajectory,
 			    vector< vector<float> > & lower_bounding_box_trajectory,
 			    vector< int > & which_lower_bounding_box,
@@ -686,6 +735,11 @@ int CnewBoundingBoxPlanner::progressive_build_lowerBBOX_trajectory(
 			    const struct aiScene* &ai_env, 
 			    PQP_Model &pqp_env)
 {
+    v.clear();
+    t.traj.clear();
+    t.halfSteps_startindexes.clear();
+    t.size = 0;
+    
     filebuf fb;
     fb.open (pg_config,ios::in); 
     istream is(&fb);
@@ -705,6 +759,8 @@ int CnewBoundingBoxPlanner::progressive_build_lowerBBOX_trajectory(
     is >> bufstring >> maxHeight;
     is >> bufstring >> t_start;
     is >> bufstring >> t_total;
+    
+    t.incrTime = incrTime;
 
     sliderPG->set_incrTime(incrTime);  
     if(left_or_right == 'L') sliderPG->set_first_support_foot(LEFT);
@@ -727,7 +783,7 @@ int CnewBoundingBoxPlanner::progressive_build_lowerBBOX_trajectory(
     hsc.t_total = t_total;
     sliderPG->set_constants(hsc);
     
-    int is_ok = 0;    
+//     int is_ok = 0;    
     footprints.clear();
     fprints_vector.clear();
     //fprints_vector is built PROGRESSIVELY!
@@ -741,23 +797,42 @@ int CnewBoundingBoxPlanner::progressive_build_lowerBBOX_trajectory(
     
     vector<float> vfpi(3);
     //compute the 2 first configs. for the lower bounding box:
-    vfpi[0] = start_pos_and_orient.x + sin(start_pos_and_orient.theta) * 0.095; //TODO: this is hrp2-dependent: WRONG INITIALIZATION (and it should also depend on the first support foot)
-    vfpi[1] = start_pos_and_orient.y - cos(start_pos_and_orient.theta) * 0.095; //TODO: this is hrp2-dependent
-    vfpi[2] = start_pos_and_orient.theta;
-    fprints_vector.push_back(vfpi);
+//     vfpi[0] = start_pos_and_orient.x + sin(start_pos_and_orient.theta) * 0.095; //TODO: this is hrp2-dependent: WRONG INITIALIZATION (and it should also depend on the first support foot)
+//     vfpi[1] = start_pos_and_orient.y - cos(start_pos_and_orient.theta) * 0.095; //TODO: this is hrp2-dependent
+//     vfpi[2] = start_pos_and_orient.theta;
         
-    vfpi[0] = start_pos_and_orient.x + sin(start_pos_and_orient.theta) * -0.095; //TODO: this is hrp2-dependent: WRONG INITIALIZATION (and it should also depend on the first support foot)
-    vfpi[1] = start_pos_and_orient.y - cos(start_pos_and_orient.theta) * -0.095; //TODO: this is hrp2-dependent
-    vfpi[2] = start_pos_and_orient.theta;
-    fprints_vector.push_back(vfpi);
+//     vfpi[0] = start_pos_and_orient.x + sin(start_pos_and_orient.theta) * -0.095; //TODO: this is hrp2-dependent: WRONG INITIALIZATION (and it should also depend on the first support foot)
+//     vfpi[1] = start_pos_and_orient.y - cos(start_pos_and_orient.theta) * -0.095; //TODO: this is hrp2-dependent
+//     vfpi[2] = start_pos_and_orient.theta;
     
-    float xx = c_phi_trajectory[0][0];
+    if( firstsupportfoot == RIGHT) {
+	vfpi[0] = firstLeftFoot.x;  
+	vfpi[1] = firstLeftFoot.y;
+	vfpi[2] = firstLeftFoot.theta;
+	fprints_vector.push_back(vfpi);
+	vfpi[0] = firstRightFoot.x;
+	vfpi[1] = firstRightFoot.y;
+	vfpi[2] = firstRightFoot.theta;
+	fprints_vector.push_back(vfpi);
+    } else {
+	vfpi[0] = firstRightFoot.x;
+	vfpi[1] = firstRightFoot.y;
+	vfpi[2] = firstRightFoot.theta;
+	fprints_vector.push_back(vfpi);
+	vfpi[0] = firstLeftFoot.x;  
+	vfpi[1] = firstLeftFoot.y;
+	vfpi[2] = firstLeftFoot.theta;
+	fprints_vector.push_back(vfpi);
+    }
+    
+/*    float xx = c_phi_trajectory[0][0];
     float yy = c_phi_trajectory[0][1];
     float zz = c_phi_trajectory[0][2];
     float yawy = c_phi_trajectory[0][3]; 
-    float zcoef = which_lower_bounding_box[0] ? (zz - 1.0)/-2.0 : (zz + 1.0)/2.0;    
+    float zcoef = which_lower_bounding_box[0] ? (zz - 1.0)/-2.0 : (zz + 1.0)/2.0;*/    
     
     lower_bounding_box_trajectory[0] = vfpi;
+    int nextIndex = 1;
     
 //     for(unsigned int k = 0; k < 200; k++) {
 // 	vector<float> vc = phi_sampler(xx, yy, yawy, zcoef, 1); //1: left
@@ -773,7 +848,6 @@ int CnewBoundingBoxPlanner::progressive_build_lowerBBOX_trajectory(
 //     
 //     if(!is_ok) return 0;
     
-    int nextIndex = 1;
     for(unsigned int k = 1; k < lower_bounding_box_trajectory.size(); k++) {
 	if((int) k >= nextIndex) {
 	    nextIndex = progressive_update_lowerBBOX_config(v, t, sliderPG, k, c_phi_trajectory, lower_bounding_box_trajectory, which_lower_bounding_box, footprints, fprints_vector,
@@ -782,7 +856,29 @@ int CnewBoundingBoxPlanner::progressive_build_lowerBBOX_trajectory(
 	    which_lower_bounding_box[k] = which_lower_bounding_box[k-1];
 	    lower_bounding_box_trajectory[k] = lower_bounding_box_trajectory[k-1];
 	}
-    }   
+    }    
+    
+    start_pos_and_orient.x = c_phi_trajectory[c_phi_trajectory.size()-1][0];
+    start_pos_and_orient.y = c_phi_trajectory[c_phi_trajectory.size()-1][1];
+    start_pos_and_orient.theta = c_phi_trajectory[c_phi_trajectory.size()-1][3];
+    
+    if(  (firstsupportfoot == LEFT && fprints_vector.size() % 2 == 1) || (firstsupportfoot == RIGHT && fprints_vector.size() % 2 == 0)) {
+	firstLeftFoot.x = fprints_vector[fprints_vector.size()-2][0];
+	firstLeftFoot.y = fprints_vector[fprints_vector.size()-2][1];
+	firstLeftFoot.theta = fprints_vector[fprints_vector.size()-2][2];
+    
+	firstRightFoot.x = fprints_vector[fprints_vector.size()-1][0];
+	firstRightFoot.y = fprints_vector[fprints_vector.size()-1][1];
+	firstRightFoot.theta = fprints_vector[fprints_vector.size()-1][2];
+    } else {
+	firstLeftFoot.x = fprints_vector[fprints_vector.size()-1][0];
+	firstLeftFoot.y = fprints_vector[fprints_vector.size()-1][1];
+	firstLeftFoot.theta = fprints_vector[fprints_vector.size()-1][2];
+    
+	firstRightFoot.x = fprints_vector[fprints_vector.size()-2][0];
+	firstRightFoot.y = fprints_vector[fprints_vector.size()-2][1];
+	firstRightFoot.theta = fprints_vector[fprints_vector.size()-2][2];
+    }
     
     return 1;
 }
@@ -881,223 +977,6 @@ void CnewBoundingBoxPlanner::build_robot_footsteps (CnewSliderPG * sliderPG,
     robo.push_back_Trajectory(hrp2t);
     robo.print_trajectory(0, pos_file, zmp_file, wst_file);
   
-}
-// ----------------------------------------------------------------------------
-int CnewBoundingBoxPlanner::progressive_footstep_construction(
-			    hrp2Trajectory & hrp2t, 
-			    CnewSliderPG * sliderPG,
-			    vector< vector<float> > & fprints_vector,
-			    const SE2 & robo_startSE2,
-			    const char * pg_config, 
-			    const char * pos_file, 
-			    const char * zmp_file, 
-			    const char * wst_file
-			    LoR firstsupportfoot,
-			    SE2 & start_pos_and_orient,
-			    vector< vector<float> > & c_phi_trajectory,
-			    vector< vector<float> > & lower_bounding_box_trajectory,
-			    vector< int > & which_lower_bounding_box,
-			    vector<aiMatrix4x4> & footprints,
-			    vector< vector<float> > & fprints_vector,
-			    PQP_Model & pqp_lower_bounding_box, 
-			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
-			    const struct aiScene* &ai_env, 
-			    PQP_Model &pqp_env)
-{   
-    
-    filebuf fb;
-    fb.open (pg_config,ios::in); 
-    istream is(&fb);
-    string bufstring;
-
-    float body_height;
-    char left_or_right;
-    float t_start, t_total;
-    float incrTime, gravity;
-    float hDistance, maxHeight;
-    
-    is >> bufstring >> body_height; 
-    is >> bufstring >> left_or_right;
-    is >> bufstring >> incrTime;
-    is >> bufstring >> gravity;
-    is >> bufstring >> hDistance;
-    is >> bufstring >> maxHeight;
-    is >> bufstring >> t_start;
-    is >> bufstring >> t_total;
-
-    sliderPG->set_incrTime(incrTime);  
-    LoR supportfoot;
-    if(left_or_right == 'L') {sliderPG->set_first_support_foot(LEFT); supportfoot = LEFT; }
-    else { sliderPG->set_first_support_foot(RIGHT); supportfoot = RIGHT; }    
-    
-    viaPointConfig vpc;
-    vpc.hDistance = hDistance;
-    vpc.maxHeight = maxHeight;
-    sliderPG->set_vp_config(vpc);
-
-    feetDimensions fdim;
-    fdim.width = 0.13; //TODO: still hrp2-dependent
-    fdim.length = 0.23;
-    sliderPG->set_ft_dim(fdim);
-    
-    hsConstants hsc;
-    hsc.g = gravity;
-    hsc.standard_height = body_height;
-    hsc.t_start = t_start;
-    hsc.t_total = t_total;
-    sliderPG->set_constants(hsc);
-     
-    hrp2Trajectory hrp2t;
-    hrp2t.trajFeats.size = 0;
-    hrp2t.trajFeats.incrTime = incrTime;    
-    
-    int is_ok = 0;    
-    footprints.clear();
-    fprints_vector.clear();
-    //fprints_vector is built PROGRESSIVELY!
-    
-    lower_bounding_box_trajectory.clear();
-    lower_bounding_box_trajectory.resize(c_phi_trajectory.size());
-   
-    which_lower_bounding_box.clear();
-    which_lower_bounding_box.resize(c_phi_trajectory.size());
-    which_lower_bounding_box[0] = firstsupportfoot == RIGHT ? 0 : 1;
-    
-    vector<float> vfpi(3);
-    //compute the starting config. for the lower bounding box:
-    vfpi[0] = start_pos_and_orient.x + sin(start_pos_and_orient.theta) * -0.095; //TODO: this is hrp2-dependent: WRONG INITIALIZATION (and it should also depend on the first support foot)
-    vfpi[1] = start_pos_and_orient.y - cos(start_pos_and_orient.theta) * -0.095; //TODO: this is hrp2-dependent
-    vfpi[2] = start_pos_and_orient.theta;
-    fprints_vector.push_back(vfpi);
-    
-    vector<float>  prestart_sfoot(3);
-    prestart_sfoot[0] = start_pos_and_orient.x + sin(start_pos_and_orient.theta) * 0.095;
-    prestart_sfoot[1] = start_pos_and_orient.y - cos(start_pos_and_orient.theta) * 0.095;
-    prestart_sfoot[2] = start_pos_and_orient.theta;
-    
-    float xx = c_phi_trajectory[0][0];
-    float yy = c_phi_trajectory[0][1];
-    float zz = c_phi_trajectory[0][2];
-    float yawy = c_phi_trajectory[0][3]; 
-    float zcoef = which_lower_bounding_box[0] ? (zz - 1.0)/-2.0 : (zz + 1.0)/2.0;
-    
-    //finding the first step:
-    for(unsigned int k = 0; k < 200; k++) {
-	vector<float> vc = phi_sampler(xx, yy, yawy, zcoef, 1); //1: left
-	
-	float res = distanceQuery(pqp_lower_bounding_box, ai_lower_bounding_box_init_matrix, vc[0], vc[1], 0.0, ai_env, pqp_env);
-	
-	if(res > 0.0001) {
-	    is_ok = 1;
-	    lower_bounding_box_trajectory[0] = vc;
-	    break;
-	}
-    }
-    
-    if(!is_ok) return 0;
-    
-    int nextIndex = 1;
-    for(unsigned int k = 1; k < lower_bounding_box_trajectory.size(); k++) {
-	if((int) k >= nextIndex) {
-	    nextIndex = update_lowerBBOX_config(k, c_phi_trajectory, lower_bounding_box_trajectory, which_lower_bounding_box, footprints, fprints_vector,
-		pqp_lower_bounding_box, ai_lower_bounding_box_init_matrix, ai_env, pqp_env);    
-	    //new element in fprints_vector, with parameters similar to a SE2 object.
-	    
-	    //we must first compute the SE2 object config_curr_supportfoot.
-	    
-	    SE2 config_curr_supportfoot;
-	    
-	    if(fprints_vector.size() == 1) {
-		SE2.x = vfpi[0];
-		SE2.y = vfpi[1];
-		SE2.theta = vfpi[2];
-	    } else {
-		SE2.x = fprints_vector[fprints_vector.size()-2][0];
-		SE2.y = fprints_vector[fprints_vector.size()-2][1];
-		SE2.theta = fprints_vector[fprints_vector.size()-2][2];
-	    }
-	    
-	    halfStepDefinition hsdef;
-	
-	    hsdef.support_foot = supportfoot;
-	    if(supportfoot == LEFT) supportfoot = RIGHT;
-	    else supportfoot = LEFT; 
-	    
-	    hsdef.vp_config = vpc;
-	    hsdef.ft_dim = fdim;
-	    hsdef.constants = hsc;
-	    
-	    hsdef.half_step_type = UP;    
-	    
-	    //now we must configure the upward half-step
-	    
-	    if(fprints_vector.size() == 1) {
-		
-	    } else if(fprints_vector.size() == 2) {
-		
-		
-	    } else {
-	
-	    }
-	        
-	    
-	stepsVect.push_back( cos(radV)*(fprints_vector[i][0] - fprints_vector[i-1][0]) - sin(radV)*(fprints_vector[i][1] - fprints_vector[i-1][1])  );
-	    
-	stepsVect.push_back( sin(radV)*(fprints_vector[i][0] - fprints_vector[i-1][0]) + cos(radV)*(fprints_vector[i][1] - fprints_vector[i-1][1])  );
-
-	hsdef.pos_and_orient.x = vect_input[5*i-2];
-	hsdef.pos_and_orient.y = vect_input[5*i-1];
-	hsdef.pos_and_orient.theta = vect_input[5*i]*PI/180.0;
-	hsdef.half_step_type = DOWN;
-	
-// 		cout << config_curr.x << " " << config_curr.y << " " << hsdef.pos_and_orient.x << " " << hsdef.pos_and_orient.y << endl;
-	generate_halfStepFeatures(t_tmp, config_curr, hsdef);
-// 		t.halfSteps_startindexes.push_back( slider->slideUpDownCOEF(t, coef_slide2, 0.3, t_tmp) );
-	t.halfSteps_startindexes.push_back( slider->slideUpDownMAX(t, t_tmp) );
-	
-	config_prev.x = config_curr.x; config_prev.y = config_curr.y; config_prev.theta = config_curr.theta;
-	config_curr.x += cos(config_prev.theta)*vect_input[5*i-2]-sin(config_prev.theta)*vect_input[5*i-1];
-	config_curr.y += sin(config_prev.theta)*vect_input[5*i-2]+cos(config_prev.theta)*vect_input[5*i-1];
-	config_curr.theta += vect_input[5*i]*PI/180.0;
-	
-	hsdef.pos_and_orient.x = (config_prev.x - config_curr.x) * cos(-config_curr.theta) - (config_prev.y - config_curr.y) * sin(-config_curr.theta);
-	hsdef.pos_and_orient.y = (config_prev.x - config_curr.x) * sin(-config_curr.theta) + (config_prev.y - config_curr.y) * cos(-config_curr.theta);
-	hsdef.pos_and_orient.theta =  -vect_input[5*i]*PI/180.0;
-	hsdef.half_step_type = UP;   
-	float A = (fprints_vector[i][2] - fprints_vector[i-1][2])+2*PI;
-	float B = (fprints_vector[i][2] - fprints_vector[i-1][2])-2*PI;
-	float C = (fprints_vector[i][2] - fprints_vector[i-1][2]);
-	float D;
-	if(abs(A) < abs(B) && abs(A) < abs(C)) D = A;
-	else if(abs(B) < abs(A) && abs(B) < abs(C)) D = B;
-	else D = C;
-	stepsVect.push_back( 180.0/PI * D );
-	    
-	    
-	halfStepDefinition hsdef;
-	
-	hsdef.support_foot = supportfoot;
-	if(supportfoot == LEFT) supportfoot = RIGHT;
-	else supportfoot = LEFT;
-	
-	hsdef.half_step_type = UP;
-	
-	hsdef.vp_config = vpc;
-	hsdef.ft_dim = fdim;
-	hsdef.constants = hsc;
-	    
-	hsdef.pos_and_orient.x = ;
-	hsdef.pos_and_orient.y = ;
-	hsdef.pos_and_orient.theta = ;
-	    
-	    
-	} else {
-	    which_lower_bounding_box[k] = which_lower_bounding_box[k-1];
-	    lower_bounding_box_trajectory[k] = lower_bounding_box_trajectory[k-1];
-	}
-    }   
-    
-    return 1;
 }
 // ----------------------------------------------------------------------------
 void CnewBoundingBoxPlanner::do_motion_phi (int time_elapsed,

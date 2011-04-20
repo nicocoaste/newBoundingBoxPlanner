@@ -133,11 +133,12 @@ class CnewBoundingBoxPlanner
 		
 		vector<aiMatrix4x4> footprint_matrixes;
 		
+		SE2 randomGoal();
+		
 		void plan(
 			    SE2 & startSE2, 
 			    SE2 & goalSE2,
-			    LoR firstsupportfoot
- 			) {
+			    LoR firstsupportfoot) {
 		    
 		    plan_and_build_discrete_phi_trajectory(
 			    startSE2, 
@@ -158,7 +159,51 @@ class CnewBoundingBoxPlanner
 			    ai_env, 
 			    pqp_env);    
 		}
-			    
+		
+		void plan_phi(
+			    SE2 & startSE2, 
+			    SE2 & goalSE2,
+			    LoR firstsupportfoot) {
+		    
+		    plan_and_build_discrete_phi_trajectory(
+			    startSE2, 
+			    goalSE2);
+		    from_discrete_to_continuous_phi_trajectory(
+			    discrete_phi_trajectory, 
+			    continuous_phi_trajectory);  
+		}
+		
+		//When it's done, startSE2, firstLeftFoot and firstRightFoot are updated.
+		void plan_steps(
+			    vector<HalfStep> & v,
+			    trajFeatures & t, 
+			    CnewSliderPG * sliderPG,
+			    const char * pg_config,
+			    SE2 & startSE2,
+			    SE2 & firstLeftFoot,
+			    SE2 & firstRightFoot,
+			    LoR firstsupportfoot) {
+		    
+		   progressive_build_lowerBBOX_trajectory(
+			    v,
+			    t,
+			    sliderPG,
+			    pg_config,
+			    firstsupportfoot,
+			    startSE2,
+			    firstLeftFoot,
+			    firstRightFoot,
+			    continuous_phi_trajectory, 
+			    lowerBBOXTrajectory, 
+			    whichlowerBBOX, 
+			    footprint_matrixes, 
+			    footprint_vector,
+			    pqp_lowerBBOX, 
+			    lowerBBOX_init_matrix, 
+			    ai_env, 
+			    pqp_env);        
+		}
+		    
 		void build_robot_footsteps (
 			    CnewSliderPG * sliderPG,
 			    Chrp2Robot & robo,
@@ -221,6 +266,7 @@ class CnewBoundingBoxPlanner
 			    int right0_left1);
 		
 		bool isStateValid(
+			    int repeat,
 			    float xx, 
 			    float yy, 
 			    float zz,
@@ -233,6 +279,7 @@ class CnewBoundingBoxPlanner
 			    PQP_Model &pqp_env);
 		
 		bool isStateValid(
+			    int repeat,
 			    const ob::State *state, 
 			    PQP_Model &pqp_objectLOWER, 
 			    PQP_Model &pqp_objectUPPER, 
@@ -248,6 +295,10 @@ class CnewBoundingBoxPlanner
 			    SE2 & startSE2, 
 			    SE2 & goalSE2);
 		
+		void from_discrete_to_continuous_phi_trajectory(
+			    vector< vector<float> > & d_phi_trajectory, 
+			    vector< vector<float> > & c_phi_trajectory);
+		
 		int update_lowerBBOX_config(
 			    int index, 
 			    vector< vector<float> > & c_phi_trajectory,
@@ -259,14 +310,44 @@ class CnewBoundingBoxPlanner
 			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
 			    const struct aiScene* &ai_env, 
 			    PQP_Model &pqp_env);
-		
-		void from_discrete_to_continuous_phi_trajectory(
-			    vector< vector<float> > & d_phi_trajectory, 
-			    vector< vector<float> > & c_phi_trajectory);
+
+		int progressive_update_lowerBBOX_config(
+			    vector<HalfStep> & v,
+			    trajFeatures & t,    
+			    CnewSliderPG * sliderPG,
+			    int index, 
+			    vector< vector<float> > & c_phi_trajectory,
+			    vector< vector<float> > & lower_bounding_box_trajectory,
+			    vector< int > & which_lower_bounding_box,
+			    vector<aiMatrix4x4> & footprints,
+			    vector< vector<float> > & fprints_vector,
+			    PQP_Model & pqp_lower_bounding_box, 
+			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
+			    const struct aiScene* &ai_env, 
+			    PQP_Model &pqp_env);
 		
 		int build_lowerBBOX_trajectory(
 			    LoR firstsupportfoot,
 			    SE2 & start_pos_and_orient,
+			    vector< vector<float> > & c_phi_trajectory,
+			    vector< vector<float> > & lower_bounding_box_trajectory,
+			    vector< int > & which_lower_bounding_box,
+			    vector<aiMatrix4x4> & footprints,
+			    vector< vector<float> > & fprints_vector,
+			    PQP_Model & pqp_lower_bounding_box, 
+			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
+			    const struct aiScene* &ai_env, 
+			    PQP_Model &pqp_env);
+		
+		int progressive_build_lowerBBOX_trajectory(
+			    vector<HalfStep> & v,
+			    trajFeatures & t,   
+			    CnewSliderPG * sliderPG,
+			    const char * pg_config,
+			    LoR firstsupportfoot,
+			    SE2 & start_pos_and_orient,
+			    SE2 & firstLeftFoot,
+			    SE2 & firstRightFoot,
 			    vector< vector<float> > & c_phi_trajectory,
 			    vector< vector<float> > & lower_bounding_box_trajectory,
 			    vector< int > & which_lower_bounding_box,
