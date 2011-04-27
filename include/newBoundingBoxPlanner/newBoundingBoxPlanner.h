@@ -249,6 +249,9 @@ class CnewBoundingBoxPlanner
 		vector< vector<float> > continuous_phi_trajectory;
 		vector< vector<float> > lowerBBOXTrajectory;
 		vector< int > whichlowerBBOX;
+		
+		deque<SE2> SE2deck_left;
+		deque<SE2> SE2deck_right;
 	    
 		vector<float>  phi_sampler(
 			    float x, 
@@ -258,6 +261,14 @@ class CnewBoundingBoxPlanner
 			    int right0_left1);
 		
 		bool phi_verifier(
+			    float dx, 
+			    float dy, 
+			    float dyaw, 
+			    float yaw, 
+			    float zcoef, 
+			    int right0_left1);
+		
+		bool phi_verifier2(
 			    float dx, 
 			    float dy, 
 			    float dyaw, 

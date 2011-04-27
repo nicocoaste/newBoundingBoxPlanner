@@ -120,6 +120,13 @@ bool CnewBoundingBoxPlanner::phi_verifier(float dx, float dy, float dyaw, float 
     float ddy = sin(yaw)*dx - cos(yaw)*dy;
     return (ddx*ddx + ddy*ddy < 0.40*0.40*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && (lr_coef * ddy) < 0.37*zcoef && abs(dyaw) < 16.0*PI/180.0);
 }
+
+bool CnewBoundingBoxPlanner::phi_verifier2(float dx, float dy, float dyaw, float yaw, float zcoef, int right0_left1) {    
+    float lr_coef = right0_left1 ? -1.0 : 1.0; 
+    float ddx = cos(yaw)*dx + sin(yaw)*dy;
+    float ddy = sin(yaw)*dx - cos(yaw)*dy;
+    return (ddx*ddx + ddy*ddy < 0.40*0.40*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && (lr_coef * ddy) < 0.37*zcoef && abs(dyaw) < 2.0*PI/180.0);
+}
 // ----------------------------------------------------------------------------
 bool CnewBoundingBoxPlanner::isStateValid(int repeat, float xx, float yy, float zz, float yawy, 
 		  PQP_Model &pqp_objectLOWER, 
@@ -129,7 +136,7 @@ bool CnewBoundingBoxPlanner::isStateValid(int repeat, float xx, float yy, float 
 		  const struct aiScene* &ai_env,
 		  PQP_Model &pqp_env) {
 
-    float x,y;
+//     float x,y;
 //     float yaw = 0.0;
     
     bool RightOK = false;
@@ -145,30 +152,57 @@ bool CnewBoundingBoxPlanner::isStateValid(int repeat, float xx, float yy, float 
 //     
 //     float resUp = distanceQuery(pqp_objectUPPER, ai_object_init_matrixUPPER, (xl + xr)/2.0, (yl + yr)/2.0, -yawy - PI/2.0, ai_env, pqp_env);
 //     if(resUp <= 0.0001) return 0;
-    
-    for(int k = 0; k < repeat; k++) {
-	vector<float> vc = phi_sampler(xx, yy, yawy, zcoefRIGHT, 0);
-	x = vc[0]; 
-	y = vc[1];
+   
+    for(unsigned int k = 0; k < SE2deck_right.size(); k++) {
+	if(phi_verifier2(SE2deck_right[k].x - xx, SE2deck_right[k].y - yy, SE2deck_right[k].theta - yawy, yawy, zcoefRIGHT, 0)) {    
+	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, SE2deck_right[k].x, SE2deck_right[k].y, -SE2deck_right[k].theta - PI/2.0, ai_env, pqp_env);   
+	    if(res > 0.0001) {    
+		LeftOK = true;
+		break;
+	    }
+	}
+    }    
+    if(!RightOK) {
+	for(int k = 0; k < repeat; k++) {
+	    vector<float> vc = phi_sampler(xx, yy, yawy, zcoefRIGHT, 0);
 
-	float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, x, y, -yawy - PI/2.0, ai_env, pqp_env);
-	
-	if(res > 0.0001) {
-	    RightOK = true;
-	    break;
+	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, vc[0], vc[1], -vc[2] - PI/2.0, ai_env, pqp_env);
+	    
+	    if(res > 0.0001) {
+		SE2 to_push;
+		to_push.x = vc[0]; to_push.y = vc[1]; to_push.theta = vc[2];
+		SE2deck_right.push_front(to_push);
+		if(SE2deck_right.size() > 20) SE2deck_right.pop_back();
+		RightOK = true;
+		break;
+	    }
 	}
     }
-    
-    for(int k = 0; k < repeat; k++) {
-	vector<float> vc = phi_sampler(xx, yy, yawy, zcoefLEFT, 1);
-	x = vc[0]; 
-	y = vc[1];
+     
+     
+    for(unsigned int k = 0; k < SE2deck_left.size(); k++) {
+	if(phi_verifier2(SE2deck_left[k].x - xx, SE2deck_left[k].y - yy, SE2deck_left[k].theta - yawy, yawy, zcoefLEFT, 1)) {    
+	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, SE2deck_left[k].x, SE2deck_left[k].y, -SE2deck_left[k].theta - PI/2.0, ai_env, pqp_env);   
+	    if(res > 0.0001) {    
+		LeftOK = true;
+		break;
+	    }
+	}
+    }   
+    if(!LeftOK){
+	for(int k = 0; k < repeat; k++) {
+	    vector<float> vc = phi_sampler(xx, yy, yawy, zcoefLEFT, 1);
 
-	float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, x, y, -yawy - PI/2.0, ai_env, pqp_env);
-	
-	if(res > 0.0001) {
-	    LeftOK = true;
-	    break;
+	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, vc[0], vc[1], -vc[2] - PI/2.0, ai_env, pqp_env);
+	    
+	    if(res > 0.0001) {
+		SE2 to_push;
+		to_push.x = vc[0]; to_push.y = vc[1]; to_push.theta = vc[2];
+		SE2deck_left.push_front(to_push);
+		if(SE2deck_left.size() > 20) SE2deck_left.pop_back();
+		LeftOK = true;
+		break;
+	    }
 	}
     }
     
