@@ -43,6 +43,14 @@
 #define aisgl_min(x,y) (x<y?x:y)
 #define aisgl_max(x,y) (y>x?y:x)
 
+
+// dequeue<SE2> SE2deck_right;
+// dequeue<SE2> SE2deck_left;
+// 
+// SE2deck_right.push_front;
+// if(SE2deck_right.size() > 0) SE2deck_right[0]
+// if(SE2deck.pop_back();
+
 // float modul(float a, float b)
 // {
 // int result = static_cast<int>( a / b );
@@ -90,7 +98,8 @@ vector<float>  CnewBoundingBoxPlanner::phi_sampler(float x, float y, float yaw, 
     for(unsigned int i = 0; i < 100; i++) {
 	dx = (((float) rand())/((float) RAND_MAX + 1.0)*0.40*2 - 0.40);
 	dy = (lr_coef * ( ((float) rand())/((float) RAND_MAX + 1.0)*(0.37-0.16) + 0.16 )); //0.37 != 0.40 => NOT CIRCULAR ANYMORE !!
-	dyaw = 0.0; //((float) rand())/((float) RAND_MAX + 1.0)*20.0*PI/180.0 - 10*PI/180.0;
+// 	dyaw = 0.0; //((float) rand())/((float) RAND_MAX + 1.0)*20.0*PI/180.0 - 10*PI/180.0;
+	dyaw = ((float) rand())/((float) RAND_MAX + 1.0)*4.0*PI/180.0 - 2.0*PI/180.0;
 	if(dx*dx + dy*dy < 0.40*0.40 && (lr_coef * dy) > 0.16) {
 	    result[0] = x + (dx * cos(yaw) + dy * sin(yaw)) * zcoef; 
 	    result[1] = y + (dx * sin(yaw) - dy * cos(yaw)) * zcoef;
@@ -149,6 +158,7 @@ bool CnewBoundingBoxPlanner::isStateValid(int repeat, float xx, float yy, float 
 	    break;
 	}
     }
+    
     for(int k = 0; k < repeat; k++) {
 	vector<float> vc = phi_sampler(xx, yy, yawy, zcoefLEFT, 1);
 	x = vc[0]; 
