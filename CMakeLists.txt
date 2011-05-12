@@ -119,6 +119,14 @@ SET(${PROJECT_NAME}_LDFLAGS "${LIBDIR_KW}${CMAKE_PREFIX_INSTALL}/lib ${LIBINCLUS
 add_subdirectory(src)
 add_subdirectory(unitTesting)
 
+# Prepare the documentation
+# -------------------------
+INCLUDE(FindDoxygen)
+IF(DOXYGEN_FOUND)
+  MESSAGE(STATUS "Doxygen found")
+  add_subdirectory(doc)
+ENDIF(DOXYGEN_FOUND)
+
 # Prepare description file for pkg-config.
 #-----------------------------------------
 
