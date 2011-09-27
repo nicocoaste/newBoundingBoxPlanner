@@ -28,6 +28,8 @@
 *
 */
 
+/*Now on the "newstructure" branch.*/
+
 #ifndef NEWBOUNDINGBOXPLANNER_H
 #define NEWBOUNDINGBOXPLANNER_H
 
