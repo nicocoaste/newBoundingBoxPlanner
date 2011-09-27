@@ -145,13 +145,18 @@ bool CnewBoundingBoxPlanner::isStateValid(int repeat, float xx, float yy, float 
     float zcoefRIGHT = (zz + 1.0)/2.0;
     float zcoefLEFT = (zz - 1.0)/-2.0;
     
-//     float xl = xx + ( -0.16 * sin(yawy)) * zcoefLEFT; 
-//     float yl = yy - ( -0.16 * cos(yawy)) * zcoefLEFT; 
-//     float xr = xx + ( 0.16 * sin(yawy)) * zcoefRIGHT; 
-//     float yr = yy - ( 0.16 * cos(yawy)) * zcoefRIGHT;
-//     
-//     float resUp = distanceQuery(pqp_objectUPPER, ai_object_init_matrixUPPER, (xl + xr)/2.0, (yl + yr)/2.0, -yawy - PI/2.0, ai_env, pqp_env);
-//     if(resUp <= 0.0001) return 0;
+    float xl = xx + ( -0.16 * sin(yawy)) * zcoefLEFT; 
+    float yl = yy - ( -0.16 * cos(yawy)) * zcoefLEFT; 
+    float xr = xx + ( 0.16 * sin(yawy)) * zcoefRIGHT; 
+    float yr = yy - ( 0.16 * cos(yawy)) * zcoefRIGHT;
+    
+//     float xl = xx; 
+//     float yl = yy; 
+//     float xr = xx; 
+//     float yr = yy;
+   
+    float resUp = distanceQuery(pqp_objectUPPER, ai_object_init_matrixUPPER, (xl + xr)/2.0, (yl + yr)/2.0, -yawy - PI/2.0, ai_env, pqp_env);
+    if(resUp <= 0.0001) return 0;
    
     for(unsigned int k = 0; k < SE2deck_right.size(); k++) {
 	if(phi_verifier2(SE2deck_right[k].x - xx, SE2deck_right[k].y - yy, SE2deck_right[k].theta - yawy, yawy, zcoefRIGHT, 0)) {    
@@ -330,20 +335,16 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
 
     pdef->setStartAndGoalStates(start, goal);
     
-//  ob::PlannerPtr planner(new og::RRTConnect(si));
+//  ob::PlannerPtr planner(new og::KPIECE1modif(si));
 //     ob::PlannerPtr planner(new og::BasicPRMmodif(si));
-// 	
-//     planner->setProblemDefinition(pdef);
-// 
-//     planner->setup();
-    
     ob::PlannerPtr planner(new og::RRTConnectmodif(si));
+//     ob::PlannerPtr planner(new og::SBLmodif(si));
 	
     planner->setProblemDefinition(pdef);
 
     planner->setup();
     
-    bool solved = planner->solve(10.0);
+    bool solved = planner->solve(30.0);
     
     if (solved)
     {

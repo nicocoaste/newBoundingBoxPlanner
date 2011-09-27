@@ -214,11 +214,11 @@ bool ompl::geometric::BasicPRMmodif::solve(const base::PlannerTerminationConditi
         }
 
         // if there already is a solution, construct it
-//         if (haveSolution(startM, goalM, &solEndpoints))
-//         {
-//             constructSolution(solEndpoints.first, solEndpoints.second);
-//             break;
-//         }
+        if (haveSolution(startM, goalM, &solEndpoints))
+        {
+            constructSolution(solEndpoints.first, solEndpoints.second);
+            break;
+        }
         // othewise, spend some time building a roadmap
         else
         {
@@ -229,11 +229,11 @@ bool ompl::geometric::BasicPRMmodif::solve(const base::PlannerTerminationConditi
             else
                 growRoadmap(startM, goalM, ptc, xstate);
             // if a solution has been found, construct it
-//             if (haveSolution(startM, goalM, &solEndpoints))
-//             {
-//                 constructSolution(solEndpoints.first, solEndpoints.second);
-//                 break;
-//             }
+            if (haveSolution(startM, goalM, &solEndpoints))
+            {
+                constructSolution(solEndpoints.first, solEndpoints.second);
+                break;
+            }
         }
     }
     if (haveSolution(startM, goalM, &solEndpoints))
