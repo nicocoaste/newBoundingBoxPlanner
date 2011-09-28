@@ -64,156 +64,283 @@ void composeSE2( SE2 & resultVect, const SE2 & globalVect, const SE2 & relativeV
     resultVect.y = globalVect.y + relativeVect.x * sin(globalVect.theta) + relativeVect.y * cos(globalVect.theta);
     resultVect.theta = globalVect.theta + relativeVect.theta;    
 }
-float distanceQuery(PQP_Model &pqp_object, aiMatrix4x4 & ai_object_init_matrix, float x, float y, float theta, const struct aiScene* &ai_env, PQP_Model &pqp_env) {    
-    
-	aiVector3D vtest(x, 0.0, y);
-	aiMatrix4x4 matr2;
-	aiMatrix4x4::Translation(vtest, matr2);
-	aiMatrix4x4 matrFPR;
-	aiMatrix4x4::RotationY(theta, matrFPR);
 
-	aiMatrix4x4 matr_env = ai_env->mRootNode->mTransformation;
-	aiMatrix4x4 matr_obj = (matr2 * matrFPR) * ai_object_init_matrix;
-	PQP_REAL Renv[3][3],Robj[3][3],Tenv[3],Tobj[3];
-	for(unsigned int i=0; i<3; i++) {
-		for(unsigned int j=0; j<3; j++) {
-			Renv[i][j] = matr_env[i][j];
-			Robj[i][j] = matr_obj[i][j];
-		}
-		Tenv[i] = matr_env[i][3];
-		Tobj[i] = matr_obj[i][3];
-	}
+// float distanceQuery(PQP_Model &pqp_object, aiMatrix4x4 & ai_object_init_matrix, float x, float y, float theta, const struct aiScene* &ai_env, PQP_Model &pqp_env) {    
+//     
+// 	aiVector3D vtest(x, 0.0, y);
+// 	aiMatrix4x4 matr2;
+// 	aiMatrix4x4::Translation(vtest, matr2);
+// 	aiMatrix4x4 matrFPR;
+// 	aiMatrix4x4::RotationY(theta, matrFPR);
+// 
+// 	aiMatrix4x4 matr_env = ai_env->mRootNode->mTransformation;
+// 	aiMatrix4x4 matr_obj = (matr2 * matrFPR) * ai_object_init_matrix;
+// 	PQP_REAL Renv[3][3],Robj[3][3],Tenv[3],Tobj[3];
+// 	for(unsigned int i=0; i<3; i++) {
+// 		for(unsigned int j=0; j<3; j++) {
+// 			Renv[i][j] = matr_env[i][j];
+// 			Robj[i][j] = matr_obj[i][j];
+// 		}
+// 		Tenv[i] = matr_env[i][3];
+// 		Tobj[i] = matr_obj[i][3];
+// 	}
+// 	PQP_REAL rel_err = 0.0;
+// 	PQP_REAL abs_err = 0.0;
+// 	PQP_DistanceResult res;
+// 	PQP_Distance(&res,Renv,Tenv,&pqp_env,Robj,Tobj,&pqp_object,rel_err,abs_err);    
+// 	
+// 	return res.Distance();
+// }
+float distanceQuery(model3d & object, SE2 state, vector< model3d > & obstacle_list) {    
+    
+	//FOR THE MOMENT, TOO MANY OPERATIONS ON THE MATRIXES !!
+	aiVector3D vtranslate(state.x, 0.0, state.y);
+	aiMatrix4x4 matr = object.init_Tmatrix;
+	aiMatrix4x4::RotationY(state.theta, matr);
+	aiMatrix4x4::Translation(vtranslate, matr);
+	
 	PQP_REAL rel_err = 0.0;
 	PQP_REAL abs_err = 0.0;
 	PQP_DistanceResult res;
-	PQP_Distance(&res,Renv,Tenv,&pqp_env,Robj,Tobj,&pqp_object,rel_err,abs_err);    
-	
-	return res.Distance();
-}
-// ----------------------------------------------------------------------------
-vector<float>  CnewBoundingBoxPlanner::phi_sampler(float x, float y, float yaw, float zcoef, int right0_left1) { //0: we sample for the right foot, 1: we sample for the left foot
-    vector<float> result(3);
-    float lr_coef = right0_left1 ? -1.0 : 1.0;    
-    float dx, dy, dyaw;
-    for(unsigned int i = 0; i < 100; i++) {
-	dx = (((float) rand())/((float) RAND_MAX + 1.0)*0.40*2 - 0.40);
-	dy = (lr_coef * ( ((float) rand())/((float) RAND_MAX + 1.0)*(0.37-0.16) + 0.16 )); //0.37 != 0.40 => NOT CIRCULAR ANYMORE !!
-// 	dyaw = 0.0; //((float) rand())/((float) RAND_MAX + 1.0)*20.0*PI/180.0 - 10*PI/180.0;
-	dyaw = ((float) rand())/((float) RAND_MAX + 1.0)*4.0*PI/180.0 - 2.0*PI/180.0;
-	if(dx*dx + dy*dy < 0.40*0.40 && (lr_coef * dy) > 0.16) {
-	    result[0] = x + (dx * cos(yaw) + dy * sin(yaw)) * zcoef; 
-	    result[1] = y + (dx * sin(yaw) - dy * cos(yaw)) * zcoef;
-	    result[2] = yaw + dyaw;
-	    return result;
+	PQP_REAL Robstacle[3][3],Robj[3][3],Tobstacle[3],Tobj[3];
+	for(unsigned int i=0; i<3; i++) {
+		for(unsigned int j=0; j<3; j++) {
+			Robj[i][j] = matr[i][j];
+		}
+		Tobj[i] = matr[i][3];
 	}
-    }
-    dx = 0.0;
-    dy = 0.16 * lr_coef;
-    result[0] = x + (dx * cos(yaw) + dy * sin(yaw)) * zcoef; 
-    result[1] = y + (dx * sin(yaw) - dy * cos(yaw)) * zcoef;
-    result[2] = yaw;
-    return result;    
-}
-bool CnewBoundingBoxPlanner::phi_verifier(float dx, float dy, float dyaw, float yaw, float zcoef, int right0_left1) {    
-    float lr_coef = right0_left1 ? -1.0 : 1.0; 
-    float ddx = cos(yaw)*dx + sin(yaw)*dy;
-    float ddy = sin(yaw)*dx - cos(yaw)*dy;
-    return (ddx*ddx + ddy*ddy < 0.40*0.40*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && (lr_coef * ddy) < 0.37*zcoef && abs(dyaw) < 16.0*PI/180.0);
-}
-
-bool CnewBoundingBoxPlanner::phi_verifier2(float dx, float dy, float dyaw, float yaw, float zcoef, int right0_left1) {    
-    float lr_coef = right0_left1 ? -1.0 : 1.0; 
-    float ddx = cos(yaw)*dx + sin(yaw)*dy;
-    float ddy = sin(yaw)*dx - cos(yaw)*dy;
-    return (ddx*ddx + ddy*ddy < 0.40*0.40*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && (lr_coef * ddy) < 0.37*zcoef && abs(dyaw) < 2.0*PI/180.0);
+	float result = 99999999.9;
+	float tmp = 0;
+	for(unsigned int count=0; count<obstacle_list.size(); count++) {
+	    for(unsigned int i=0; i<3; i++) {
+		    for(unsigned int j=0; j<3; j++) {
+			    Robstacle[i][j] = obstacle_list[count].ai_object->mRootNode->mTransformation[i][j];
+		    }
+		    Tobstacle[i] = obstacle_list[count].ai_object->mRootNode->mTransformation[i][3];
+	    }
+	    PQP_Distance(&res,Robstacle,Tobstacle,obstacle_list[count].pqp,Robj,Tobj,object.pqp,rel_err,abs_err);
+	    tmp = res.Distance();
+	    if(tmp < result) result = tmp;
+	}
+	
+	return tmp;
 }
 // ----------------------------------------------------------------------------
-bool CnewBoundingBoxPlanner::isStateValid(int repeat, float xx, float yy, float zz, float yawy, 
-		  PQP_Model &pqp_objectLOWER, 
-		  PQP_Model &pqp_objectUPPER,
-		  aiMatrix4x4 & ai_object_init_matrixLOWER, 
-		  aiMatrix4x4 & ai_object_init_matrixUPPER, 
-		  const struct aiScene* &ai_env,
-		  PQP_Model &pqp_env) {
+			    SE2 state,
+			    //for now, LoR (LEFT or RIGHT) is defined in newSliderPG, in halfStep_creation.h
+			    LoR left_or_right);
+			    
+// vector<float>  CnewBoundingBoxPlanner::phi_sampler(float x, float y, float yaw, float zcoef, int right0_left1) { //0: we sample for the right foot, 1: we sample for the left foot
+//     vector<float> result(3);
+//     float lr_coef = right0_left1 ? -1.0 : 1.0;    
+//     float dx, dy, dyaw;
+//     for(unsigned int i = 0; i < 100; i++) {
+// 	dx = (((float) rand())/((float) RAND_MAX + 1.0)*0.40*2 - 0.40);
+// 	dy = (lr_coef * ( ((float) rand())/((float) RAND_MAX + 1.0)*(0.37-0.16) + 0.16 )); //0.37 != 0.40 => NOT CIRCULAR ANYMORE !!
+// // 	dyaw = 0.0; //((float) rand())/((float) RAND_MAX + 1.0)*20.0*PI/180.0 - 10*PI/180.0;
+// 	dyaw = ((float) rand())/((float) RAND_MAX + 1.0)*4.0*PI/180.0 - 2.0*PI/180.0;
+// 	if(dx*dx + dy*dy < 0.40*0.40 && (lr_coef * dy) > 0.16) {
+// 	    result[0] = x + (dx * cos(yaw) + dy * sin(yaw)) * zcoef; 
+// 	    result[1] = y + (dx * sin(yaw) - dy * cos(yaw)) * zcoef;
+// 	    result[2] = yaw + dyaw;
+// 	    return result;
+// 	}
+//     }
+//     dx = 0.0;
+//     dy = 0.16 * lr_coef;
+//     result[0] = x + (dx * cos(yaw) + dy * sin(yaw)) * zcoef; 
+//     result[1] = y + (dx * sin(yaw) - dy * cos(yaw)) * zcoef;
+//     result[2] = yaw;
+//     return result;    
+// }
+void CnewBoundingBoxPlanner::phi_sampler(SE2 & sample_result, SE2 & state, LoR left_or_right) { //according to left_or_right, we sample the left or the right bounding box   
+    float radius_2 = 0.40; //the square of the radius in m
+    float h_min = 0.16; //in m
+    float max_forward = 0.3; //max_forward^2 + h_min^2 = radius_2
+    float dtheta_max = 0.1; //in radians
+    float x = (((float) rand())/((float) RAND_MAX + 1.0)*max_forward*2 - max_forward); //between -max_forward and max_forward
+    float h_max = sqrt( x * x - radius_2 );
+    float y = (((float) rand())/((float) RAND_MAX + 1.0)*(h_max - h_min) + h_min);
+    float dtheta = (((float) rand())/((float) RAND_MAX + 1.0)*dtheta_max*2 - dtheta_max);
+    if(left_or_right == LEFT) y *= -1;
+    sample_result.x = state.x + x * cos(state.theta) + y * sin(state.theta); 
+    sample_result.y = state.y + x * sin(state.theta) - y * cos(state.theta);
+    sample_result.theta = state.theta + dtheta;
+}
 
-//     float x,y;
-//     float yaw = 0.0;
+// bool CnewBoundingBoxPlanner::phi_verifier(float dx, float dy, float dyaw, float yaw, float zcoef, int right0_left1) {    
+//     float lr_coef = right0_left1 ? -1.0 : 1.0; 
+//     float ddx = cos(yaw)*dx + sin(yaw)*dy;
+//     float ddy = sin(yaw)*dx - cos(yaw)*dy;
+//     return (ddx*ddx + ddy*ddy < 0.40*0.40*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && (lr_coef * ddy) < 0.37*zcoef && abs(dyaw) < 16.0*PI/180.0);
+// }
+
+// 	if(phi_verifier2(SE2deck_right[k].x - xx, SE2deck_right[k].y - yy, SE2deck_right[k].theta - yawy, yawy, zcoefRIGHT, 0)) 
+
+bool CnewBoundingBoxPlanner::phi_verifier(SE2 state_phi, SE2 state_Bbox, LoR left_or_right) {     
+    float radius_2 = 0.40 * 0.40; //the square of the radius in m
+    float h_min = 0.16; //in m
+    float max_forward = 0.3; //max_forward^2 + h_min^2 = radius_2
+    float dtheta_max = 0.1; //in radians
+    float dx = state_Bbox.x - state_phi.x;
+    float dy = state_Bbox.y - state_phi.y;
+    float dyaw = state_Bbox.theta - state_phi.theta;   
+    float lr_coef = (left_or_right == LEFT ) ? -1.0 : 1.0; 
+    float ddx = cos(state_phi.theta)*dx + sin(state_phi.theta)*dy;
+    float ddy = sin(state_phi.theta)*dx - cos(state_phi.theta)*dy;
+    return (ddx*ddx + ddy*ddy < radius_2 && (lr_coef * ddy) > h_min && abs(dyaw) < dtheta_max);
+}
+// 
+// bool CnewBoundingBoxPlanner::phi_verifier2(float dx, float dy, float dyaw, float yaw, float zcoef, int right0_left1) {    
+//     float lr_coef = right0_left1 ? -1.0 : 1.0; 
+//     float ddx = cos(yaw)*dx + sin(yaw)*dy;
+//     float ddy = sin(yaw)*dx - cos(yaw)*dy;
+//     return (ddx*ddx + ddy*ddy < 0.40*0.40*zcoef*zcoef && (lr_coef * ddy) > 0.16*zcoef && (lr_coef * ddy) < 0.37*zcoef && abs(dyaw) < 2.0*PI/180.0);
+// }
+// ----------------------------------------------------------------------------
+// bool CnewBoundingBoxPlanner::isStateValid(int repeat, float xx, float yy, float zz, float yawy, 
+// 		  PQP_Model &pqp_objectLOWER, 
+// 		  PQP_Model &pqp_objectUPPER,
+// 		  aiMatrix4x4 & ai_object_init_matrixLOWER, 
+// 		  aiMatrix4x4 & ai_object_init_matrixUPPER, 
+// 		  const struct aiScene* &ai_env,
+// 		  PQP_Model &pqp_env) {
+// 
+// //     float x,y;
+// //     float yaw = 0.0;
+//     
+//     bool RightOK = false;
+//     bool LeftOK = false;
+//     
+//     float zcoefRIGHT = (zz + 1.0)/2.0;
+//     float zcoefLEFT = (zz - 1.0)/-2.0;
+//     
+//     float xl = xx + ( -0.16 * sin(yawy)) * zcoefLEFT; 
+//     float yl = yy - ( -0.16 * cos(yawy)) * zcoefLEFT; 
+//     float xr = xx + ( 0.16 * sin(yawy)) * zcoefRIGHT; 
+//     float yr = yy - ( 0.16 * cos(yawy)) * zcoefRIGHT;
+//     
+// //     float xl = xx; 
+// //     float yl = yy; 
+// //     float xr = xx; 
+// //     float yr = yy;
+//    
+//     float resUp = distanceQuery(pqp_objectUPPER, ai_object_init_matrixUPPER, (xl + xr)/2.0, (yl + yr)/2.0, -yawy - PI/2.0, ai_env, pqp_env);
+//     if(resUp <= 0.0001) return 0;
+//    
+//     for(unsigned int k = 0; k < SE2deck_right.size(); k++) {
+// 	if(phi_verifier2(SE2deck_right[k].x - xx, SE2deck_right[k].y - yy, SE2deck_right[k].theta - yawy, yawy, zcoefRIGHT, 0)) {    
+// 	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, SE2deck_right[k].x, SE2deck_right[k].y, -SE2deck_right[k].theta - PI/2.0, ai_env, pqp_env);   
+// 	    if(res > 0.0001) {    
+// 		LeftOK = true;
+// 		break;
+// 	    }
+// 	}
+//     }    
+//     if(!RightOK) {
+// 	for(int k = 0; k < repeat; k++) {
+// 	    vector<float> vc = phi_sampler(xx, yy, yawy, zcoefRIGHT, 0);
+// 
+// 	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, vc[0], vc[1], -vc[2] - PI/2.0, ai_env, pqp_env);
+// 	    
+// 	    if(res > 0.0001) {
+// 		SE2 to_push;
+// 		to_push.x = vc[0]; to_push.y = vc[1]; to_push.theta = vc[2];
+// 		SE2deck_right.push_front(to_push);
+// 		if(SE2deck_right.size() > 20) SE2deck_right.pop_back();
+// 		RightOK = true;
+// 		break;
+// 	    }
+// 	}
+//     }
+//      
+//      
+//     for(unsigned int k = 0; k < SE2deck_left.size(); k++) {
+// 	if(phi_verifier2(SE2deck_left[k].x - xx, SE2deck_left[k].y - yy, SE2deck_left[k].theta - yawy, yawy, zcoefLEFT, 1)) {    
+// 	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, SE2deck_left[k].x, SE2deck_left[k].y, -SE2deck_left[k].theta - PI/2.0, ai_env, pqp_env);   
+// 	    if(res > 0.0001) {    
+// 		LeftOK = true;
+// 		break;
+// 	    }
+// 	}
+//     }   
+//     if(!LeftOK){
+// 	for(int k = 0; k < repeat; k++) {
+// 	    vector<float> vc = phi_sampler(xx, yy, yawy, zcoefLEFT, 1);
+// 
+// 	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, vc[0], vc[1], -vc[2] - PI/2.0, ai_env, pqp_env);
+// 	    
+// 	    if(res > 0.0001) {
+// 		SE2 to_push;
+// 		to_push.x = vc[0]; to_push.y = vc[1]; to_push.theta = vc[2];
+// 		SE2deck_left.push_front(to_push);
+// 		if(SE2deck_left.size() > 20) SE2deck_left.pop_back();
+// 		LeftOK = true;
+// 		break;
+// 	    }
+// 	}
+//     }
+//     
+//     if( RightOK && LeftOK ) return 1;
+//     
+//     return 0;        
+// }
+
+bool CnewBoundingBoxPlanner::isStateValid( 
+			    int number_of_attempts,
+			    SE2 & state,
+			    model3d & leftBbox,
+			    model3d & rightBbox,
+			    model3d & upperBbox,
+			    vector< model3d > & obstacle_list) {
     
     bool RightOK = false;
     bool LeftOK = false;
     
-    float zcoefRIGHT = (zz + 1.0)/2.0;
-    float zcoefLEFT = (zz - 1.0)/-2.0;
+    float resUp = distanceQuery(upperBbox, state, obstacle_list);
+    if(resUp <= 0.001) return false;
     
-    float xl = xx + ( -0.16 * sin(yawy)) * zcoefLEFT; 
-    float yl = yy - ( -0.16 * cos(yawy)) * zcoefLEFT; 
-    float xr = xx + ( 0.16 * sin(yawy)) * zcoefRIGHT; 
-    float yr = yy - ( 0.16 * cos(yawy)) * zcoefRIGHT;
-    
-//     float xl = xx; 
-//     float yl = yy; 
-//     float xr = xx; 
-//     float yr = yy;
-   
-    float resUp = distanceQuery(pqp_objectUPPER, ai_object_init_matrixUPPER, (xl + xr)/2.0, (yl + yr)/2.0, -yawy - PI/2.0, ai_env, pqp_env);
-    if(resUp <= 0.0001) return 0;
-   
-    for(unsigned int k = 0; k < SE2deck_right.size(); k++) {
-	if(phi_verifier2(SE2deck_right[k].x - xx, SE2deck_right[k].y - yy, SE2deck_right[k].theta - yawy, yawy, zcoefRIGHT, 0)) {    
-	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, SE2deck_right[k].x, SE2deck_right[k].y, -SE2deck_right[k].theta - PI/2.0, ai_env, pqp_env);   
-	    if(res > 0.0001) {    
-		LeftOK = true;
+    for(unsigned int k = 0; k < rightBbox_valid_configs.size(); k++) {
+	if(phi_verifier(state, rightBbox_valid_configs[k], RIGHT)) {  
+		RightOK = true;
 		break;
 	    }
-	}
-    }    
+    }
     if(!RightOK) {
-	for(int k = 0; k < repeat; k++) {
-	    vector<float> vc = phi_sampler(xx, yy, yawy, zcoefRIGHT, 0);
-
-	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, vc[0], vc[1], -vc[2] - PI/2.0, ai_env, pqp_env);
-	    
-	    if(res > 0.0001) {
-		SE2 to_push;
-		to_push.x = vc[0]; to_push.y = vc[1]; to_push.theta = vc[2];
-		SE2deck_right.push_front(to_push);
-		if(SE2deck_right.size() > 20) SE2deck_right.pop_back();
+	for(int k = 0; number_of_attempts; k++) {
+	    SE2 new_state;
+	    phi_sampler(new_state, state, RIGHT);    
+	    if(distanceQuery(rightBbox, new_state, obstacle_list) > 0.001) {
+		rightBbox_valid_configs.push_front(new_state);
+		if(rightBbox_valid_configs.size() > 20) rightBbox_valid_configs.pop_back();
 		RightOK = true;
 		break;
 	    }
 	}
     }
-     
-     
-    for(unsigned int k = 0; k < SE2deck_left.size(); k++) {
-	if(phi_verifier2(SE2deck_left[k].x - xx, SE2deck_left[k].y - yy, SE2deck_left[k].theta - yawy, yawy, zcoefLEFT, 1)) {    
-	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, SE2deck_left[k].x, SE2deck_left[k].y, -SE2deck_left[k].theta - PI/2.0, ai_env, pqp_env);   
-	    if(res > 0.0001) {    
+    if(!RightOK) return false;
+
+    for(unsigned int k = 0; k < leftBbox_valid_configs.size(); k++) {
+	if(phi_verifier(state, leftBbox_valid_configs[k], LEFT)) {  
 		LeftOK = true;
 		break;
 	    }
-	}
-    }   
-    if(!LeftOK){
-	for(int k = 0; k < repeat; k++) {
-	    vector<float> vc = phi_sampler(xx, yy, yawy, zcoefLEFT, 1);
-
-	    float res = distanceQuery(pqp_objectLOWER, ai_object_init_matrixLOWER, vc[0], vc[1], -vc[2] - PI/2.0, ai_env, pqp_env);
-	    
-	    if(res > 0.0001) {
-		SE2 to_push;
-		to_push.x = vc[0]; to_push.y = vc[1]; to_push.theta = vc[2];
-		SE2deck_left.push_front(to_push);
-		if(SE2deck_left.size() > 20) SE2deck_left.pop_back();
+    }
+    if(!LeftOK) {
+	for(int k = 0; number_of_attempts; k++) {
+	    SE2 new_state;
+	    phi_sampler(new_state, state, LEFT);    
+	    if(distanceQuery(leftBbox, new_state, obstacle_list) > 0.001) {
+		leftBbox_valid_configs.push_front(new_state);
+		if(leftBbox_valid_configs.size() > 20) leftBbox_valid_configs.pop_back();
 		LeftOK = true;
 		break;
 	    }
 	}
     }
+    if(!LeftOK) return false;
     
-    if( RightOK && LeftOK ) return 1;
-    
-    return 0;        
+    return true;     
 }
 
 SE2 CnewBoundingBoxPlanner::randomGoal() {

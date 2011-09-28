@@ -83,6 +83,12 @@ namespace oc = ompl::control;
 
 using namespace std;
 
+struct model3d {
+    PQP_model * pqp;
+    const struct aiScene * ai_object; 
+    const aiMatrix4x4 * init_Tmatrix;
+}
+
 class CnewBoundingBoxPlanner
 {
 
@@ -92,308 +98,305 @@ class CnewBoundingBoxPlanner
 		 * Constructor.
 		 */
 		CnewBoundingBoxPlanner() {
-			    ai_env = NULL;
-			    ai_lowerBBOX = NULL;
-			    ai_upperBBOX = NULL;
-			    ai_zoneRight = NULL;
-			    ai_zoneLeft = NULL;
-			    ai_zoneRightGOAL = NULL;
-			    ai_zoneLeftGOAL = NULL;     
+// 			    ai_env = NULL;
+// 			    ai_lowerBBOX = NULL;
+// 			    ai_upperBBOX = NULL;
+// 			    ai_zoneRight = NULL;
+// 			    ai_zoneLeft = NULL;
+// 			    ai_zoneRightGOAL = NULL;
+// 			    ai_zoneLeftGOAL = NULL;     
 		}
 
 		/*!
 		 * Destructor.
 		 */
 		~CnewBoundingBoxPlanner() {
-			    delete ai_env;
+/*			    delete ai_env;
 			    delete ai_lowerBBOX;
 			    delete ai_upperBBOX;
 			    delete ai_zoneRight;
 			    delete ai_zoneLeft;
 			    delete ai_zoneRightGOAL;
-			    delete ai_zoneLeftGOAL;     
+			    delete ai_zoneLeftGOAL;  */   
 		}
 		
-		const struct aiScene* ai_env;
-		PQP_Model pqp_env;
+// 		const struct aiScene* ai_env;
+// 		PQP_Model pqp_env;
 		
-		const struct aiScene* ai_lowerBBOX;
-		const struct aiScene* ai_upperBBOX;
-		PQP_Model pqp_lowerBBOX;
-		PQP_Model pqp_upperBBOX;
-		aiMatrix4x4 lowerBBOX_init_matrix;
-		aiMatrix4x4 upperBBOX_init_matrix;
+// 		const struct aiScene* ai_lowerBBOX;
+// 		const struct aiScene* ai_upperBBOX;
+// 		PQP_Model pqp_lowerBBOX;
+// 		PQP_Model pqp_upperBBOX;
+// 		aiMatrix4x4 lowerBBOX_init_matrix;
+// 		aiMatrix4x4 upperBBOX_init_matrix;
 		
-		const struct aiScene* ai_zoneRight;
-		const struct aiScene* ai_zoneLeft;
-		const struct aiScene* ai_zoneRightGOAL;
-		const struct aiScene* ai_zoneLeftGOAL;
-		aiMatrix4x4 ai_zoneRight_init_matrix;
-		aiMatrix4x4 ai_zoneLeft_init_matrix;
-		aiMatrix4x4 ai_zoneRightGOAL_init_matrix;
-		aiMatrix4x4 ai_zoneLeftGOAL_init_matrix;
+// 		const struct aiScene* ai_zoneRight;
+// 		const struct aiScene* ai_zoneLeft;
+// 		const struct aiScene* ai_zoneRightGOAL;
+// 		const struct aiScene* ai_zoneLeftGOAL;
+// 		aiMatrix4x4 ai_zoneRight_init_matrix;
+// 		aiMatrix4x4 ai_zoneLeft_init_matrix;
+// 		aiMatrix4x4 ai_zoneRightGOAL_init_matrix;
+// 		aiMatrix4x4 ai_zoneLeftGOAL_init_matrix;
 		
-		vector<aiMatrix4x4> footprint_matrixes;
+// 		vector<aiMatrix4x4> footprint_matrixes;
 		
 		SE2 randomGoal();
 		
-		void plan(
-			    SE2 & startSE2, 
-			    SE2 & goalSE2,
-			    LoR firstsupportfoot) {
-		    
-		    plan_and_build_discrete_phi_trajectory(
-			    startSE2, 
-			    goalSE2);
-		    from_discrete_to_continuous_phi_trajectory(
-			    discrete_phi_trajectory, 
-			    continuous_phi_trajectory);
-		    build_lowerBBOX_trajectory(
-			    firstsupportfoot,
-			    startSE2,
-			    continuous_phi_trajectory, 
-			    lowerBBOXTrajectory, 
-			    whichlowerBBOX, 
-			    footprint_matrixes, 
-			    footprint_vector,
-			    pqp_lowerBBOX, 
-			    lowerBBOX_init_matrix, 
-			    ai_env, 
-			    pqp_env);    
-		}
+// 		void plan(
+// 			    SE2 & startSE2, 
+// 			    SE2 & goalSE2,
+// 			    LoR firstsupportfoot) {
+// 		    
+// 		    plan_and_build_discrete_phi_trajectory(
+// 			    startSE2, 
+// 			    goalSE2);
+// 		    from_discrete_to_continuous_phi_trajectory(
+// 			    discrete_phi_trajectory, 
+// 			    continuous_phi_trajectory);
+// 		    build_lowerBBOX_trajectory(
+// 			    firstsupportfoot,
+// 			    startSE2,
+// 			    continuous_phi_trajectory, 
+// 			    lowerBBOXTrajectory, 
+// 			    whichlowerBBOX, 
+// 			    footprint_matrixes, 
+// 			    footprint_vector,
+// 			    pqp_lowerBBOX, 
+// 			    lowerBBOX_init_matrix, 
+// 			    ai_env, 
+// 			    pqp_env);    
+// 		}
 		
-		void plan_phi(
-			    SE2 & startSE2, 
-			    SE2 & goalSE2,
-			    LoR firstsupportfoot) {
-		    
-		    plan_and_build_discrete_phi_trajectory(
-			    startSE2, 
-			    goalSE2);
-		    from_discrete_to_continuous_phi_trajectory(
-			    discrete_phi_trajectory, 
-			    continuous_phi_trajectory);  
-		}
+		void plan_phi_trajectory(
+			    SE2 & start_state, 
+			    SE2 & goal_state);
+		
+		
+// 		void plan_phi(
+// 			    SE2 & startSE2, 
+// 			    SE2 & goalSE2,
+// 			    LoR firstsupportfoot) {
+// 		    
+// 		    plan_and_build_discrete_phi_trajectory(
+// 			    startSE2, 
+// 			    goalSE2);
+// 		    from_discrete_to_continuous_phi_trajectory(
+// 			    discrete_phi_trajectory, 
+// 			    continuous_phi_trajectory);  
+// 		}
 		
 		//When it's done, startSE2, firstLeftFoot and firstRightFoot are updated.
-		void plan_steps(
-			    vector<HalfStep> & v,
-			    trajFeatures & t, 
-			    CnewSliderPG * sliderPG,
-			    const char * pg_config,
-			    SE2 & startSE2,
-			    SE2 & firstLeftFoot,
-			    SE2 & firstRightFoot,
-			    LoR firstsupportfoot) {
+// 		void plan_steps(
+// 			    vector<HalfStep> & v,
+// 			    trajFeatures & t, 
+// 			    CnewSliderPG * sliderPG,
+// 			    const char * pg_config,
+// 			    SE2 & startSE2,
+// 			    SE2 & firstLeftFoot,
+// 			    SE2 & firstRightFoot,
+// 			    LoR firstsupportfoot) {
+// 		    
+// 		   progressive_build_lowerBBOX_trajectory(
+// 			    v,
+// 			    t,
+// 			    sliderPG,
+// 			    pg_config,
+// 			    firstsupportfoot,
+// 			    startSE2,
+// 			    firstLeftFoot,
+// 			    firstRightFoot,
+// 			    continuous_phi_trajectory, 
+// 			    lowerBBOXTrajectory, 
+// 			    whichlowerBBOX, 
+// 			    footprint_matrixes, 
+// 			    footprint_vector,
+// 			    pqp_lowerBBOX, 
+// 			    lowerBBOX_init_matrix, 
+// 			    ai_env, 
+// 			    pqp_env);        
+// 		}
 		    
-		   progressive_build_lowerBBOX_trajectory(
-			    v,
-			    t,
-			    sliderPG,
-			    pg_config,
-			    firstsupportfoot,
-			    startSE2,
-			    firstLeftFoot,
-			    firstRightFoot,
-			    continuous_phi_trajectory, 
-			    lowerBBOXTrajectory, 
-			    whichlowerBBOX, 
-			    footprint_matrixes, 
-			    footprint_vector,
-			    pqp_lowerBBOX, 
-			    lowerBBOX_init_matrix, 
-			    ai_env, 
-			    pqp_env);        
-		}
-		    
-		void build_robot_footsteps (
-			    CnewSliderPG * sliderPG,
-			    Chrp2Robot & robo,
-			    const SE2 & robo_startSE2,
-			    const char * pg_config, 
-			    const char * pos_file, 
-			    const char * zmp_file, 
-			    const char * wst_file) {
-		    
-		    build_robot_footsteps(
-			    sliderPG, 
-			    robo, 
-			    footprint_vector,
-			    robo_startSE2, 
-			    pg_config, 
-			    pos_file, 
-			    zmp_file, 
-			    wst_file);   
-		}
+// 		void build_robot_footsteps (
+// 			    CnewSliderPG * sliderPG,
+// 			    Chrp2Robot & robo,
+// 			    const SE2 & robo_startSE2,
+// 			    const char * pg_config, 
+// 			    const char * pos_file, 
+// 			    const char * zmp_file, 
+// 			    const char * wst_file) {
+// 		    
+// 		    build_robot_footsteps(
+// 			    sliderPG, 
+// 			    robo, 
+// 			    footprint_vector,
+// 			    robo_startSE2, 
+// 			    pg_config, 
+// 			    pos_file, 
+// 			    zmp_file, 
+// 			    wst_file);   
+// 		}
 		
-		void do_motion_phi (
-			    int time_elapsed) {
-		    
-		    do_motion_phi (
-			    time_elapsed,
-			    discrete_phi_trajectory,
-			    continuous_phi_trajectory,
-			    ai_lowerBBOX,    
-			    lowerBBOXTrajectory,
-			    lowerBBOX_init_matrix,
-			    ai_zoneRight,
-			    ai_zoneLeft,
-			    ai_zoneRight_init_matrix,
-			    ai_zoneLeft_init_matrix,
-			    ai_zoneRightGOAL,
-			    ai_zoneLeftGOAL);       
-		}
+// 		void do_motion_phi (
+// 			    int time_elapsed) {
+// 		    
+// 		    do_motion_phi (
+// 			    time_elapsed,
+// 			    discrete_phi_trajectory,
+// 			    continuous_phi_trajectory,
+// 			    ai_lowerBBOX,    
+// 			    lowerBBOXTrajectory,
+// 			    lowerBBOX_init_matrix,
+// 			    ai_zoneRight,
+// 			    ai_zoneLeft,
+// 			    ai_zoneRight_init_matrix,
+// 			    ai_zoneLeft_init_matrix,
+// 			    ai_zoneRightGOAL,
+// 			    ai_zoneLeftGOAL);       
+// 		}
 
 	private:
 	    
-		vector< vector<float> > footprint_vector;
-		vector< vector<float> > discrete_phi_trajectory;
-		vector< vector<float> > continuous_phi_trajectory;
-		vector< vector<float> > lowerBBOXTrajectory;
-		vector< int > whichlowerBBOX;
+// 		vector< vector<float> > footprint_vector;
+		vector< SE2 > continuous_phi_trajectory;
+// 		vector< vector<float> > lowerBBOXTrajectory;
+// 		vector< int > whichlowerBBOX;
 		
-		deque<SE2> SE2deck_left;
-		deque<SE2> SE2deck_right;
+		deque<SE2> leftBbox_valid_configs;
+		deque<SE2> rightBbox_valid_configs;
 	    
-		vector<float>  phi_sampler(
-			    float x, 
-			    float y, 
-			    float yaw, 
-			    float zcoef, 
-			    int right0_left1);
+		SE2 phi_sampler(   
+			    //for now, SE2 is defined in newSliderPG, in halfStep_creation.h
+			    SE2 & sample_result,
+			    SE2 & state,
+			    //for now, LoR (LEFT or RIGHT) is defined in newSliderPG, in halfStep_creation.h
+			    LoR left_or_right);
 		
-		bool phi_verifier(
-			    float dx, 
-			    float dy, 
-			    float dyaw, 
-			    float yaw, 
-			    float zcoef, 
-			    int right0_left1);
+// 		bool phi_verifier(
+// 			    float dx, 
+// 			    float dy, 
+// 			    float dyaw, 
+// 			    float yaw, 
+// 			    float zcoef, 
+// 			    int right0_left1);
 		
-		bool phi_verifier2(
-			    float dx, 
-			    float dy, 
-			    float dyaw, 
-			    float yaw, 
-			    float zcoef, 
-			    int right0_left1);
-		
-		bool isStateValid(
-			    int repeat,
-			    float xx, 
-			    float yy, 
-			    float zz,
-			    float yawy, 
-			    PQP_Model &pqp_objectLOWER, 
-			    PQP_Model &pqp_objectUPPER,
-			    aiMatrix4x4 & ai_object_init_matrixLOWER, 
-			    aiMatrix4x4 & ai_object_init_matrixUPPER, 
-			    const struct aiScene* &ai_env,
-			    PQP_Model &pqp_env);
+// 		bool phi_verifier2(
+// 			    float dx, 
+// 			    float dy, 
+// 			    float dyaw, 
+// 			    float yaw, 
+// 			    float zcoef, 
+// 			    int right0_left1);
 		
 		bool isStateValid(
-			    int repeat,
-			    const ob::State *state, 
-			    PQP_Model &pqp_objectLOWER, 
-			    PQP_Model &pqp_objectUPPER, 
-			    aiMatrix4x4 & ai_object_init_matrixLOWER, 
-			    aiMatrix4x4 & ai_object_init_matrixUPPER,
-			    const struct aiScene* &ai_env, 
-			    PQP_Model &pqp_env);
+			    int number_of_attempts,
+			    SE2 & state,
+			    model3d & leftBbox,
+			    model3d & rightBbox,
+			    model3d & upperBbox,
+			    vector< model3d > & obstacle_list);
 		
-		bool isStateValid_default(
-			    const ob::State *state);
+		bool isStateValid(
+			    int number_of_attempts,
+			    const ob::State *state,
+			    model3d & leftBbox,
+			    model3d & rightBbox,
+			    model3d & upperBbox,
+			    vector< model3d > & obstacle_list);
 		
-		void plan_and_build_discrete_phi_trajectory(
-			    SE2 & startSE2, 
-			    SE2 & goalSE2);
+// 		bool isStateValid_default(
+// 			    const ob::State *state);
 		
-		void from_discrete_to_continuous_phi_trajectory(
-			    vector< vector<float> > & d_phi_trajectory, 
-			    vector< vector<float> > & c_phi_trajectory);
+// 		void plan_and_build_discrete_phi_trajectory(
+// 			    SE2 & start_state, 
+// 			    SE2 & goal_state);
+// 		
+// 		void from_discrete_to_continuous_phi_trajectory(
+// 			    vector< vector<float> > & d_phi_trajectory, 
+// 			    vector< vector<float> > & c_phi_trajectory);
 		
-		int update_lowerBBOX_config(
-			    int index, 
-			    vector< vector<float> > & c_phi_trajectory,
-			    vector< vector<float> > & lower_bounding_box_trajectory,
-			    vector< int > & which_lower_bounding_box,
-			    vector<aiMatrix4x4> & footprints,
-			    vector< vector<float> > & fprints_vector,
-			    PQP_Model & pqp_lower_bounding_box, 
-			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
-			    const struct aiScene* &ai_env, 
-			    PQP_Model &pqp_env);
+// 		int update_lowerBBOX_config(
+// 			    int index, 
+// 			    vector< vector<float> > & c_phi_trajectory,
+// 			    vector< vector<float> > & lower_bounding_box_trajectory,
+// 			    vector< int > & which_lower_bounding_box,
+// 			    vector<aiMatrix4x4> & footprints,
+// 			    vector< vector<float> > & fprints_vector,
+// 			    PQP_Model & pqp_lower_bounding_box, 
+// 			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
+// 			    const struct aiScene* &ai_env, 
+// 			    PQP_Model &pqp_env);
 
-		int progressive_update_lowerBBOX_config(
-			    vector<HalfStep> & v,
-			    trajFeatures & t,    
-			    CnewSliderPG * sliderPG,
-			    int index, 
-			    vector< vector<float> > & c_phi_trajectory,
-			    vector< vector<float> > & lower_bounding_box_trajectory,
-			    vector< int > & which_lower_bounding_box,
-			    vector<aiMatrix4x4> & footprints,
-			    vector< vector<float> > & fprints_vector,
-			    PQP_Model & pqp_lower_bounding_box, 
-			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
-			    const struct aiScene* &ai_env, 
-			    PQP_Model &pqp_env);
+// 		int progressive_update_lowerBBOX_config(
+// 			    vector<HalfStep> & v,
+// 			    trajFeatures & t,    
+// 			    CnewSliderPG * sliderPG,
+// 			    int index, 
+// 			    vector< vector<float> > & c_phi_trajectory,
+// 			    vector< vector<float> > & lower_bounding_box_trajectory,
+// 			    vector< int > & which_lower_bounding_box,
+// 			    vector<aiMatrix4x4> & footprints,
+// 			    vector< vector<float> > & fprints_vector,
+// 			    PQP_Model & pqp_lower_bounding_box, 
+// 			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
+// 			    const struct aiScene* &ai_env, 
+// 			    PQP_Model &pqp_env);
 		
-		int build_lowerBBOX_trajectory(
-			    LoR firstsupportfoot,
-			    SE2 & start_pos_and_orient,
-			    vector< vector<float> > & c_phi_trajectory,
-			    vector< vector<float> > & lower_bounding_box_trajectory,
-			    vector< int > & which_lower_bounding_box,
-			    vector<aiMatrix4x4> & footprints,
-			    vector< vector<float> > & fprints_vector,
-			    PQP_Model & pqp_lower_bounding_box, 
-			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
-			    const struct aiScene* &ai_env, 
-			    PQP_Model &pqp_env);
+// 		int build_lowerBBOX_trajectory(
+// 			    LoR firstsupportfoot,
+// 			    SE2 & start_pos_and_orient,
+// 			    vector< vector<float> > & c_phi_trajectory,
+// 			    vector< vector<float> > & lower_bounding_box_trajectory,
+// 			    vector< int > & which_lower_bounding_box,
+// 			    vector<aiMatrix4x4> & footprints,
+// 			    vector< vector<float> > & fprints_vector,
+// 			    PQP_Model & pqp_lower_bounding_box, 
+// 			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
+// 			    const struct aiScene* &ai_env, 
+// 			    PQP_Model &pqp_env);
 		
-		int progressive_build_lowerBBOX_trajectory(
-			    vector<HalfStep> & v,
-			    trajFeatures & t,   
-			    CnewSliderPG * sliderPG,
-			    const char * pg_config,
-			    LoR firstsupportfoot,
-			    SE2 & start_pos_and_orient,
-			    SE2 & firstLeftFoot,
-			    SE2 & firstRightFoot,
-			    vector< vector<float> > & c_phi_trajectory,
-			    vector< vector<float> > & lower_bounding_box_trajectory,
-			    vector< int > & which_lower_bounding_box,
-			    vector<aiMatrix4x4> & footprints,
-			    vector< vector<float> > & fprints_vector,
-			    PQP_Model & pqp_lower_bounding_box, 
-			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
-			    const struct aiScene* &ai_env, 
-			    PQP_Model &pqp_env);
+// 		int progressive_build_lowerBBOX_trajectory(
+// 			    vector<HalfStep> & v,
+// 			    trajFeatures & t,   
+// 			    CnewSliderPG * sliderPG,
+// 			    const char * pg_config,
+// 			    LoR firstsupportfoot,
+// 			    SE2 & start_pos_and_orient,
+// 			    SE2 & firstLeftFoot,
+// 			    SE2 & firstRightFoot,
+// 			    vector< vector<float> > & c_phi_trajectory,
+// 			    vector< vector<float> > & lower_bounding_box_trajectory,
+// 			    vector< int > & which_lower_bounding_box,
+// 			    vector<aiMatrix4x4> & footprints,
+// 			    vector< vector<float> > & fprints_vector,
+// 			    PQP_Model & pqp_lower_bounding_box, 
+// 			    aiMatrix4x4 & ai_lower_bounding_box_init_matrix, 
+// 			    const struct aiScene* &ai_env, 
+// 			    PQP_Model &pqp_env);
 		
-		void do_motion_phi (
-			    int time_elapsed,
-			    vector< vector<float> > & d_phi_trajectory, 
-			    vector< vector<float> > & c_phi_trajectory,
-			    const struct aiScene* ai_lower_bounding_box, 
-			    vector< vector<float> > & lower_bounding_box_trajectory,    
-			    aiMatrix4x4 & ai_lower_bouding_box_init_matrix,
-			    const struct aiScene* ai_phizone_right, 
-			    const struct aiScene* ai_phizone_left, 
-			    aiMatrix4x4 & ai_phizone_right_init_matrix,
-			    aiMatrix4x4 & ai_phizone_left_init_matrix,      
-			    const struct aiScene* ai_phizone_right_GOAL,  
-			    const struct aiScene* ai_phizone_left_GOAL);
+// 		void do_motion_phi (
+// 			    int time_elapsed,
+// 			    vector< vector<float> > & d_phi_trajectory, 
+// 			    vector< vector<float> > & c_phi_trajectory,
+// 			    const struct aiScene* ai_lower_bounding_box, 
+// 			    vector< vector<float> > & lower_bounding_box_trajectory,    
+// 			    aiMatrix4x4 & ai_lower_bouding_box_init_matrix,
+// 			    const struct aiScene* ai_phizone_right, 
+// 			    const struct aiScene* ai_phizone_left, 
+// 			    aiMatrix4x4 & ai_phizone_right_init_matrix,
+// 			    aiMatrix4x4 & ai_phizone_left_init_matrix,      
+// 			    const struct aiScene* ai_phizone_right_GOAL,  
+// 			    const struct aiScene* ai_phizone_left_GOAL);
 		
-		void build_robot_footsteps (
-			    CnewSliderPG * sliderPG,
-			    Chrp2Robot & robo,
-			    vector< vector<float> > & fprints_vector,
-			    const SE2 & robo_startSE2,
-			    const char * pg_config, 
-			    const char * pos_file, 
-			    const char * zmp_file, 
-			    const char * wst_file);
+// 		void build_robot_footsteps (
+// 			    CnewSliderPG * sliderPG,
+// 			    Chrp2Robot & robo,
+// 			    vector< vector<float> > & fprints_vector,
+// 			    const SE2 & robo_startSE2,
+// 			    const char * pg_config, 
+// 			    const char * pos_file, 
+// 			    const char * zmp_file, 
+// 			    const char * wst_file);
 };
 
 #endif
