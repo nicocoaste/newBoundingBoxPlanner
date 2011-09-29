@@ -27,11 +27,18 @@ MESSAGE(STATUS " unitTesting: ${UNITTESTING_CXXFLAGS}")
 #ADD_DEPENDENCIES (name_of_the_exectuable ${PROJECT_NAME})
 
 ADD_EXECUTABLE( unit.out unit.cpp)
-SET_TARGET_PROPERTIES( unit.out
-	              PROPERTIES
-	              COMPILE_FLAGS ${${PROJECT_NAME}_test_CXXFLAGS}
-          	      LINK_FLAGS "${${PROJECT_NAME}_test_LDFLAGS} -Wl,-R${PROJECT_SOURCE_DIR}/build/src ${PROJECT_SOURCE_DIR}/build/src/lib${PROJECT_NAME}.so"
-
+SET_TARGET_PROPERTIES( unit.out	              
+		      PROPERTIES
+	              COMPILE_FLAGS "-lpthread ${${PROJECT_NAME}_test_CXXFLAGS}"
+          	      LINK_FLAGS "-lpthread ${${PROJECT_NAME}_test_LDFLAGS} -Wl,-R${PROJECT_SOURCE_DIR}/build/src ${PROJECT_SOURCE_DIR}/build/src/lib${PROJECT_NAME}.so"
 )
-
-ADD_DEPENDENCIES (unit.out ${PROJECT_NAME})
+TARGET_LINK_LIBRARIES(unit.out ${PROJECT_NAME})
+TARGET_LINK_LIBRARIES(unit.out PQP)
+TARGET_LINK_LIBRARIES(unit.out ompl)
+TARGET_LINK_LIBRARIES(unit.out assimp)
+TARGET_LINK_LIBRARIES(unit.out assimpBasedViewer)
+TARGET_LINK_LIBRARIES(unit.out newSliderPG)
+TARGET_LINK_LIBRARIES(unit.out hrp2Robot)
+TARGET_LINK_LIBRARIES(unit.out GLU)
+TARGET_LINK_LIBRARIES(unit.out GL)
+TARGET_LINK_LIBRARIES(unit.out glut)

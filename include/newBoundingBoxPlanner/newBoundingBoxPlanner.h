@@ -39,7 +39,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
-#include <math>
+#include <cmath>
 
 // #include <stdio.h>
 
@@ -72,6 +72,7 @@
 
 #include <ompl/control/SpaceInformation.h>
 #include <ompl/base/GoalState.h>
+#include <ompl/base/manifolds/SE2StateManifold.h>
 #include <ompl/control/manifolds/RealVectorControlManifold.h>
 #include <ompl/control/planners/kpiece/KPIECE1.h>
 #include <ompl/control/planners/rrt/RRT.h>
@@ -85,20 +86,18 @@ namespace oc = ompl::control;
 using namespace std;
 
 struct model3d {
-    PQP_model * pqp;
+    PQP_Model * pqp;
     const struct aiScene * ai_object; 
     const aiMatrix4x4 * init_Tmatrix;
-}
+};
 
 class CnewBoundingBoxPlanner
 {
-
 	public:
-
 		/*!
 		 * Constructor.
 		 */
-		CnewBoundingBoxPlanner() {
+		CnewBoundingBoxPlanner() {}
 // 			    ai_env = NULL;
 // 			    ai_lowerBBOX = NULL;
 // 			    ai_upperBBOX = NULL;
@@ -106,21 +105,19 @@ class CnewBoundingBoxPlanner
 // 			    ai_zoneLeft = NULL;
 // 			    ai_zoneRightGOAL = NULL;
 // 			    ai_zoneLeftGOAL = NULL;     
-		}
 
 		/*!
 		 * Destructor.
 		 */
-		~CnewBoundingBoxPlanner() {
+		~CnewBoundingBoxPlanner() {}
 /*			    delete ai_env;
 			    delete ai_lowerBBOX;
 			    delete ai_upperBBOX;
 			    delete ai_zoneRight;
 			    delete ai_zoneLeft;
 			    delete ai_zoneRightGOAL;
-			    delete ai_zoneLeftGOAL;  */   
-		}
-		
+			    delete ai_zoneLeftGOAL;  */  
+
 // 		const struct aiScene* ai_env;
 // 		PQP_Model pqp_env;
 		
@@ -143,9 +140,10 @@ class CnewBoundingBoxPlanner
 // 		vector<aiMatrix4x4> footprint_matrixes;
 		
 		model3d leftBbox;
-		model3d rightBbox,
-		model3d upperBbox,
+		model3d rightBbox;
+		model3d upperBbox;
 		vector< model3d > obstacle_list;
+		vector<SE2> continuous_phi_trajectory;
 		
 		SE2 randomGoal();
 		
@@ -264,7 +262,6 @@ class CnewBoundingBoxPlanner
 	private:
 	    
 // 		vector< vector<float> > footprint_vector;
-		vector< SE2 > continuous_phi_trajectory;
 // 		vector< vector<float> > lowerBBOXTrajectory;
 // 		vector< int > whichlowerBBOX;
 		
@@ -273,7 +270,7 @@ class CnewBoundingBoxPlanner
 		
 		float distanceQuery(model3d & object, SE2 state, vector< model3d > & list_of_obstacles);
 	    
-		SE2 phi_sampler(   
+		void phi_sampler(   
 			    //for now, SE2 is defined in newSliderPG, in halfStep_creation.h
 			    SE2 & sample_result,
 			    SE2 & state,

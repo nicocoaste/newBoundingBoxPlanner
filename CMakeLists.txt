@@ -45,9 +45,11 @@ INCLUDE(FindPkgConfig)
 pkg_check_modules(PQP REQUIRED PQP>=1.3)
 pkg_check_modules(OMPL REQUIRED OMPL>=0.9)
 pkg_check_modules(ASSIMP REQUIRED assimp>=2.0)
+pkg_check_modules(ABV REQUIRED assimpBasedViewer>=0.9)
 pkg_check_modules(NSPG REQUIRED newSliderPG>=0.9)
 pkg_check_modules(HRP2R REQUIRED hrp2Robot>=0.9)
-
+pkg_check_modules(GLU REQUIRED glu>=7.9)
+pkg_check_modules(GLUT REQUIRED glut>=3.9)
 
 # -----
 
@@ -58,8 +60,11 @@ SET(PROJECT_REQUIREMENTS "PQP >= 1.3 OMPL >= 0.9 assimp >= 2.0 newSliderPG >= 0.
 MESSAGE(STATUS "${PQP_CFLAGS}")
 MESSAGE(STATUS "${OMPL_CFLAGS}")
 MESSAGE(STATUS "${ASSIMP_CFLAGS}")
+MESSAGE(STATUS "${ABV_CFLAGS}")
 MESSAGE(STATUS "${NSPG_CFLAGS}")
 MESSAGE(STATUS "${HRP2R_CFLAGS}")
+MESSAGE(STATUS "${GLU_CFLAGS}")
+MESSAGE(STATUS "${GLUT_CFLAGS}")
 
 # -----
 
@@ -79,11 +84,23 @@ FOREACH(option_cxxflags ${ASSIMP_CFLAGS})
   SET(${PROJECT_NAME}_CXXFLAGS "${option_cxxflags} ${${PROJECT_NAME}_CXXFLAGS}")
 ENDFOREACH(option_cxxflags)
 
+FOREACH(option_cxxflags ${ABV_CFLAGS})
+  SET(${PROJECT_NAME}_CXXFLAGS "${option_cxxflags} ${${PROJECT_NAME}_CXXFLAGS}")
+ENDFOREACH(option_cxxflags)
+
 FOREACH(option_cxxflags ${NSPG_CFLAGS})
   SET(${PROJECT_NAME}_CXXFLAGS "${option_cxxflags} ${${PROJECT_NAME}_CXXFLAGS}")
 ENDFOREACH(option_cxxflags)
 
 FOREACH(option_cxxflags ${HRP2R_CFLAGS})
+  SET(${PROJECT_NAME}_CXXFLAGS "${option_cxxflags} ${${PROJECT_NAME}_CXXFLAGS}")
+ENDFOREACH(option_cxxflags)
+
+FOREACH(option_cxxflags ${GLU_CFLAGS})
+  SET(${PROJECT_NAME}_CXXFLAGS "${option_cxxflags} ${${PROJECT_NAME}_CXXFLAGS}")
+ENDFOREACH(option_cxxflags)
+
+FOREACH(option_cxxflags ${GLUT_CFLAGS})
   SET(${PROJECT_NAME}_CXXFLAGS "${option_cxxflags} ${${PROJECT_NAME}_CXXFLAGS}")
 ENDFOREACH(option_cxxflags)
 
@@ -101,11 +118,23 @@ FOREACH(option_ldflags ${ASSIMP_LDFLAGS})
   SET(${PROJECT_NAME}_LDFLAGS "${option_ldflags} ${${PROJECT_NAME}_LDFLAGS}")
 ENDFOREACH(option_ldflags)
 
+FOREACH(option_ldflags ${ABV_LDFLAGS})
+  SET(${PROJECT_NAME}_LDFLAGS "${option_ldflags} ${${PROJECT_NAME}_LDFLAGS}")
+ENDFOREACH(option_ldflags)
+
 FOREACH(option_ldflags ${NSPG_LDFLAGS})
   SET(${PROJECT_NAME}_LDFLAGS "${option_ldflags} ${${PROJECT_NAME}_LDFLAGS}")
 ENDFOREACH(option_ldflags)
 
 FOREACH(option_ldflags ${HRP2R_LDFLAGS})
+  SET(${PROJECT_NAME}_LDFLAGS "${option_ldflags} ${${PROJECT_NAME}_LDFLAGS}")
+ENDFOREACH(option_ldflags)
+
+FOREACH(option_ldflags ${GLU_LDFLAGS})
+  SET(${PROJECT_NAME}_LDFLAGS "${option_ldflags} ${${PROJECT_NAME}_LDFLAGS}")
+ENDFOREACH(option_ldflags)
+
+FOREACH(option_ldflags ${GLUT_LDFLAGS})
   SET(${PROJECT_NAME}_LDFLAGS "${option_ldflags} ${${PROJECT_NAME}_LDFLAGS}")
 ENDFOREACH(option_ldflags)
 
