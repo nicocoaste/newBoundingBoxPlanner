@@ -126,10 +126,6 @@ float distanceQuery(model3d & object, SE2 state, vector< model3d > & obstacle_li
 	return tmp;
 }
 // ----------------------------------------------------------------------------
-			    SE2 state,
-			    //for now, LoR (LEFT or RIGHT) is defined in newSliderPG, in halfStep_creation.h
-			    LoR left_or_right);
-			    
 // vector<float>  CnewBoundingBoxPlanner::phi_sampler(float x, float y, float yaw, float zcoef, int right0_left1) { //0: we sample for the right foot, 1: we sample for the left foot
 //     vector<float> result(3);
 //     float lr_coef = right0_left1 ? -1.0 : 1.0;    
@@ -343,67 +339,65 @@ bool CnewBoundingBoxPlanner::isStateValid(
     return true;     
 }
 
-SE2 CnewBoundingBoxPlanner::randomGoal() {
+bool CnewBoundingBoxPlanner::isStateValid(
+		  int number_of_attempts,
+		  const ob::State *state, 
+		  model3d & leftBbox,
+		  model3d & rightBbox,
+		  model3d & upperBbox,
+		  vector< model3d > & obstacle_list) {
+    
+    const ob::SE2StateManifold::StateType *s = state->as<ob::SE2StateManifold::StateType>();
+    
+    SE2 se2state;
+    se2state.x = s->getX();
+    se2state.y = s->getY();
+    se2state.theta = s->getYaw();      
  
+    return isStateValid(number_of_attempts, se2state, leftBbox, rightBbox, upperBbox, obstacle_list);
+    
+}
+
+SE2 CnewBoundingBoxPlanner::randomGoal(
+			    model3d & leftBbox,
+			    model3d & rightBbox,
+			    model3d & upperBbox,
+			    vector< model3d > & obstacle_list) {
     SE2 ret_config;
     ret_config.x = 0;
     ret_config.y = 0;
     ret_config.theta = 0;
     for(int i = 0; i < 100; i++) {
-	float xx =  ((float) rand())/((float) RAND_MAX + 1.0)*4.0 - 3.0;
-	float yy =  ((float) rand())/((float) RAND_MAX + 1.0)*4.0 - 2.0;
-	float zz = 0;
-	float yawy = ((float) rand())/((float) RAND_MAX + 1.0)*2*PI - PI;    
-	
+	ret_config.x =  ((float) rand())/((float) RAND_MAX + 1.0)*4.0 - 3.0;
+	ret_config.y =  ((float) rand())/((float) RAND_MAX + 1.0)*4.0 - 2.0;
+	ret_config.theta = ((float) rand())/((float) RAND_MAX + 1.0)*2*PI - PI;
 	bool decid = true;
-	for(unsigned int u = 0; u < 50; u++) {
-	    if( ! isStateValid(18, xx, yy, zz, yawy, pqp_lowerBBOX, pqp_upperBBOX, lowerBBOX_init_matrix, upperBBOX_init_matrix, ai_env, pqp_env))
-		decid = false;    
+	for(unsigned int u = 0; u < 30; u++) {
+	    if( !isStateValid(18, ret_config, leftBbox, rightBbox, upperBbox, obstacle_list) ) decid = false;
 	}
-	
-	if(decid) {
-	    ret_config.x = xx;
-	    ret_config.y = yy;
-	    ret_config.theta = yawy;    
+	if(decid) { 
 	    return ret_config;    
-	}   
-	
+	}
     }   
     cout << "Random Goal not found" << endl;
     return ret_config;    
 }
-
-bool CnewBoundingBoxPlanner::isStateValid(
-		  int repeat,
-		  const ob::State *state, 
-		  PQP_Model &pqp_objectLOWER, 
-		  PQP_Model &pqp_objectUPPER, 
-		  aiMatrix4x4 & ai_object_init_matrixLOWER, 
-		  aiMatrix4x4 & ai_object_init_matrixUPPER,
-		  const struct aiScene* &ai_env, 
-		  PQP_Model &pqp_env) {
-    
-    const ob::SE2plusStateManifold::StateType *s = state->as<ob::SE2plusStateManifold::StateType>();
-    
-    float xx = s->getX();
-    float yy = s->getY();
-    float zz = s->getZ(); //+1 is for full right, -1 is for full left
-    
-    float yawy = s->getYaw();
- 
-    return isStateValid(repeat, xx, yy, zz, yawy, pqp_objectLOWER, pqp_objectUPPER, ai_object_init_matrixLOWER, ai_object_init_matrixUPPER, ai_env, pqp_env);
-    
-}
-bool CnewBoundingBoxPlanner::isStateValid_default(const ob::State *state) {
-    
-    return isStateValid(18, state, pqp_lowerBBOX, pqp_upperBBOX, lowerBBOX_init_matrix, upperBBOX_init_matrix, ai_env, pqp_env);
-    
-}
-
-bool testt(const ob::State * state) {
-    return true;
-}
 // ----------------------------------------------------------------------------
+
+void CnewBoundingBoxPlanner::plan_phi_trajectory(
+			    SE2 & start_state, 
+			    SE2 & goal_state,
+			    model3d & leftBbox,
+			    model3d & rightBbox,
+			    model3d & upperBbox,
+			    vector< model3d > & obstacle_list)
+{
+    vector< SE2 > discrete_phi_trajectory;
+    continuous_phi_trajectory.clear();
+    
+    
+}
+
 void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startSE2, SE2 & goalSE2)
 { 
     
@@ -415,18 +409,15 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
     whichlowerBBOX.clear();    
     
     // construct the manifold we are planning in    
-    ob::StateManifoldPtr manifold(new ob::SE2plusStateManifold()); 
+    ob::StateManifoldPtr manifold(new ob::SE2StateManifold()); 
     
-    ob::RealVectorBounds bounds(3); //TODO: change this, since the bounds should depend on the context.
+    ob::RealVectorBounds bounds(2); //TODO: change this, since the bounds should depend on the context.
     bounds.setLow(0, -3.0);
     bounds.setHigh(0, 1.0);
     bounds.setLow(1, -2.0);
     bounds.setHigh(1, 2.0);
-    
-    bounds.setLow(2, -0.99);
-    bounds.setHigh(2, 0.99);
 
-    manifold->as<ob::SE2plusStateManifold>()->setBounds(bounds);
+    manifold->as<ob::SE2StateManifold>()->setBounds(bounds);
 
     ob::SpaceInformationPtr si(new ob::SpaceInformation(manifold));
 

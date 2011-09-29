@@ -141,7 +141,11 @@ class CnewBoundingBoxPlanner
 		
 // 		vector<aiMatrix4x4> footprint_matrixes;
 		
-		SE2 randomGoal();
+		SE2 randomGoal(
+			    model3d & leftBbox,
+			    model3d & rightBbox,
+			    model3d & upperBbox,
+			    vector< model3d > & obstacle_list);
 		
 // 		void plan(
 // 			    SE2 & startSE2, 
@@ -170,7 +174,11 @@ class CnewBoundingBoxPlanner
 		
 		void plan_phi_trajectory(
 			    SE2 & start_state, 
-			    SE2 & goal_state);
+			    SE2 & goal_state,
+			    model3d & leftBbox,
+			    model3d & rightBbox,
+			    model3d & upperBbox,
+			    vector< model3d > & obstacle_list);
 		
 		
 // 		void plan_phi(
@@ -272,6 +280,10 @@ class CnewBoundingBoxPlanner
 			    //for now, LoR (LEFT or RIGHT) is defined in newSliderPG, in halfStep_creation.h
 			    LoR left_or_right);
 		
+		bool phi_verifier(
+			    SE2 state_phi, 
+			    SE2 state_Bbox,
+			    LoR left_or_right);
 // 		bool phi_verifier(
 // 			    float dx, 
 // 			    float dy, 
