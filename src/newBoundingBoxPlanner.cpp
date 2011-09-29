@@ -91,7 +91,7 @@ void composeSE2( SE2 & resultVect, const SE2 & globalVect, const SE2 & relativeV
 // 	
 // 	return res.Distance();
 // }
-float distanceQuery(model3d & object, SE2 state, vector< model3d > & obstacle_list) {    
+float distanceQuery(model3d & object, SE2 state, vector< model3d > & list_of_obstacles) {    
     
 	//FOR THE MOMENT, TOO MANY OPERATIONS ON THE MATRIXES !!
 	aiVector3D vtranslate(state.x, 0.0, state.y);
@@ -114,11 +114,11 @@ float distanceQuery(model3d & object, SE2 state, vector< model3d > & obstacle_li
 	for(unsigned int count=0; count<obstacle_list.size(); count++) {
 	    for(unsigned int i=0; i<3; i++) {
 		    for(unsigned int j=0; j<3; j++) {
-			    Robstacle[i][j] = obstacle_list[count].ai_object->mRootNode->mTransformation[i][j];
+			    Robstacle[i][j] = list_of_obstacles[count].ai_object->mRootNode->mTransformation[i][j];
 		    }
-		    Tobstacle[i] = obstacle_list[count].ai_object->mRootNode->mTransformation[i][3];
+		    Tobstacle[i] = list_of_obstacles[count].ai_object->mRootNode->mTransformation[i][3];
 	    }
-	    PQP_Distance(&res,Robstacle,Tobstacle,obstacle_list[count].pqp,Robj,Tobj,object.pqp,rel_err,abs_err);
+	    PQP_Distance(&res,Robstacle,Tobstacle,list_of_obstacles[count].pqp,Robj,Tobj,object.pqp,rel_err,abs_err);
 	    tmp = res.Distance();
 	    if(tmp < result) result = tmp;
 	}
@@ -284,11 +284,7 @@ bool CnewBoundingBoxPlanner::phi_verifier(SE2 state_phi, SE2 state_Bbox, LoR lef
 
 bool CnewBoundingBoxPlanner::isStateValid( 
 			    int number_of_attempts,
-			    SE2 & state,
-			    model3d & leftBbox,
-			    model3d & rightBbox,
-			    model3d & upperBbox,
-			    vector< model3d > & obstacle_list) {
+			    SE2 & state) {
     
     bool RightOK = false;
     bool LeftOK = false;
@@ -341,11 +337,7 @@ bool CnewBoundingBoxPlanner::isStateValid(
 
 bool CnewBoundingBoxPlanner::isStateValid(
 		  int number_of_attempts,
-		  const ob::State *state, 
-		  model3d & leftBbox,
-		  model3d & rightBbox,
-		  model3d & upperBbox,
-		  vector< model3d > & obstacle_list) {
+		  const ob::State *state) {
     
     const ob::SE2StateManifold::StateType *s = state->as<ob::SE2StateManifold::StateType>();
     
@@ -354,15 +346,16 @@ bool CnewBoundingBoxPlanner::isStateValid(
     se2state.y = s->getY();
     se2state.theta = s->getYaw();      
  
-    return isStateValid(number_of_attempts, se2state, leftBbox, rightBbox, upperBbox, obstacle_list);
+    return isStateValid(number_of_attempts, se2state);
+    
+}
+bool CnewBoundingBoxPlanner::isStateValid_default(const ob::State *state) {
+    
+   return isStateValid(20, state);
     
 }
 
-SE2 CnewBoundingBoxPlanner::randomGoal(
-			    model3d & leftBbox,
-			    model3d & rightBbox,
-			    model3d & upperBbox,
-			    vector< model3d > & obstacle_list) {
+SE2 CnewBoundingBoxPlanner::randomGoal() {
     SE2 ret_config;
     ret_config.x = 0;
     ret_config.y = 0;
@@ -383,31 +376,23 @@ SE2 CnewBoundingBoxPlanner::randomGoal(
     return ret_config;    
 }
 // ----------------------------------------------------------------------------
+//A handy function that computes a difference (modulo 2PI) between two angles given in radians,
+//so that the result has the smallest possible abolute value.
+float distance_angle(float theta_1, float theta_2) {
+    
+    float dtheta = modf( theta2 - theta1 / (2*PI) );
+    if(dtheta < -0.5) dtheta += 1.0;
+    else if(dtheta > -0.5) dtheta -= 1.0;    
+    return (dtheta * 2 * PI);
+}
+
 
 void CnewBoundingBoxPlanner::plan_phi_trajectory(
 			    SE2 & start_state, 
-			    SE2 & goal_state,
-			    model3d & leftBbox,
-			    model3d & rightBbox,
-			    model3d & upperBbox,
-			    vector< model3d > & obstacle_list)
+			    SE2 & goal_state)
 {
     vector< SE2 > discrete_phi_trajectory;
     continuous_phi_trajectory.clear();
-    
-    
-}
-
-void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startSE2, SE2 & goalSE2)
-{ 
-    
-    discrete_phi_trajectory.clear();
-    footprint_matrixes.clear();
-    footprint_vector.clear();
-    continuous_phi_trajectory.clear();
-    lowerBBOXTrajectory.clear();
-    whichlowerBBOX.clear();    
-    
     // construct the manifold we are planning in    
     ob::StateManifoldPtr manifold(new ob::SE2StateManifold()); 
     
@@ -424,40 +409,23 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
     si->setStateValidityChecker(boost::bind(&CnewBoundingBoxPlanner::isStateValid_default, this, _1));
     si->setStateValidityCheckingResolution(0.03);
     
-    ob::ScopedState<ob::SE2plusStateManifold> start(manifold);
-//     start.random(); 
-    start->setXYZ(startSE2.x,startSE2.y,0.0);
-    start->setYaw(startSE2.theta);
+    ob::ScopedState<ob::SE2StateManifold> start(manifold);
+    start->setXY(start_state.x,start_state.y);
+    start->setYaw(start_state.theta);
     
-    ob::ScopedState<ob::SE2plusStateManifold> goal(manifold);
-//     goal.random();
-    goal->setXYZ(goalSE2.x,goalSE2.y,0.0);
-    goal->setYaw(goalSE2.theta);
+    ob::ScopedState<ob::SE2StateManifold> goal(manifold);
+    goal->setXY(goal_state.x,goal_state.y);
+    goal->setYaw(goal_state.theta);
     
-    aiVector3D vtest(goal->getX(), 0.0, goal->getY());
-    aiMatrix4x4 matr2;
-    aiMatrix4x4::Translation(vtest, matr2);
-    aiMatrix4x4 matr3;
-    aiMatrix4x4::RotationY(-goal->getYaw(), matr3);    
-    aiVector3D vscaleRIGHT( 0.5, 0.5, 1.3);
-    aiMatrix4x4 matrRIGHT;
-    aiMatrix4x4::Scaling(vscaleRIGHT, matrRIGHT);
-    aiVector3D vscaleLEFT( 0.5, 0.5, 1.3);
-    aiMatrix4x4 matrLEFT;
-    aiMatrix4x4::Scaling(vscaleLEFT, matrLEFT);
-
-    ai_zoneRightGOAL->mRootNode->mTransformation = (matr2 * matr3) * ai_zoneRightGOAL_init_matrix * matrRIGHT;
-    ai_zoneLeftGOAL->mRootNode->mTransformation = (matr2 * matr3) * ai_zoneLeftGOAL_init_matrix * matrLEFT;   
-
     ob::ProblemDefinitionPtr pdef(new ob::ProblemDefinition(si));
 
     pdef->setStartAndGoalStates(start, goal);
     
 //  ob::PlannerPtr planner(new og::KPIECE1modif(si));
-//     ob::PlannerPtr planner(new og::BasicPRMmodif(si));
+//  ob::PlannerPtr planner(new og::BasicPRMmodif(si));
     ob::PlannerPtr planner(new og::RRTConnectmodif(si));
-//     ob::PlannerPtr planner(new og::SBLmodif(si));
-	
+//  ob::PlannerPtr planner(new og::SBLmodif(si));
+    
     planner->setProblemDefinition(pdef);
 
     planner->setup();
@@ -468,31 +436,152 @@ void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startS
     {
         // get the goal representation from the problem definition (not the same as the goal state)
         // and inquire about the found path   
-        cout << "Found solution:" << endl;
-        
+        cout << "Found solution:" << endl;       
 	const ob::PathPtr &path = pdef->getGoal()->getSolutionPath();
-	
 	og::PathGeometric solution_path = static_cast<og::PathGeometric&>(*path);
 
-	ob::ScopedState<ob::SE2plusStateManifold> state_curr(manifold);
+	ob::ScopedState<ob::SE2StateManifold> state_curr(manifold);
 	cout << "length: " << solution_path.length() << endl;
-	for(unsigned int i = 0; i < solution_path.states.size(); i++) {	    
+	for(unsigned int i = 0; i < solution_path.states.size(); i++) {
 	    state_curr = *solution_path.states[i];
-	    vector< float > tmpV(4);
-	    tmpV[0] = state_curr->getX();
-	    tmpV[1] = state_curr->getY();
-	    tmpV[2] = state_curr->getZ();
-	    tmpV[3] = state_curr->getYaw();
-	    discrete_phi_trajectory.push_back(tmpV);
+	    SE2 tmp_state;
+	    tmp_state.x = state_curr->getX();
+	    tmp_state.y = state_curr->getY();    
+	    tmp_state.theta = state_curr->getYaw();
+	    discrete_phi_trajectory.push_back(tmp_state);    
 	}
 	
-// 	og::PathSimplifier psimpl(si);
-// 	psimpl.simplifyMax(static_cast<og::PathGeometric&>(*path));
-
-        // print the path to screen
-        path->print(cout);
-    }
+	// print the path to screen:
+	path->print(cout);
+	
+	float tuned_coef = 0.5;
+	
+	float total_distance = 0;
+	for(unsigned int idex = 0; idex < discrete_phi_trajectory.size() - 1; idex++) {
+	    float dx = discrete_phi_trajectory[idex+1].x - discrete_phi_trajectory[idex].x;
+	    float dy = discrete_phi_trajectory[idex+1].y - discrete_phi_trajectory[idex].y;
+	    float dtheta = distance_angle( discrete_phi_trajectory[idex].theta, discrete_phi_trajectory[idex+1].theta);        
+	    total_distance += sqrt(dx * dx + dy * dy + tuned_coef * dtheta * dtheta);
+	}
+	
+	float current_total_distance = 0;
+	for(unsigned int idex = 0; idex < discrete_phi_trajectory.size() - 1; idex++) {
+	    float dx = discrete_phi_trajectory[idex+1].x - discrete_phi_trajectory[idex].x;
+	    float dy = discrete_phi_trajectory[idex+1].y - discrete_phi_trajectory[idex].y;
+	    float dtheta = distance_angle( discrete_phi_trajectory[idex].theta, discrete_phi_trajectory[idex+1].theta);    
+	    float current_distance = sqrt(dx * dx + dy * dy + tuned_coef * dtheta * dtheta);
+	    float start_val = 1000.0 * current_total_distance / total_distance;
+	    float end_val = 1000.0 * (current_total_distance + current_distance) / total_distance - 1.0;
+	    unsigned int start_idex = (int) start_val;
+	    unsigned int end_idex = (int) end_val;
+	    for(unsigned int time = start_idex; time <= end_idex; time++) {
+		float lambda = ((float) (time - start_idex) ) / (1.0 + (float) (end_idex - start_idex) );
+		SE2 current_state;
+		current_state.x = discrete_phi_trajectory[idex].x + lambda * dx;
+		current_state.y = discrete_phi_trajectory[idex].y + lambda * dy;
+		current_state.theta = discrete_phi_trajectory[idex].theta + lambda * dtheta;
+		continuous_phi_trajectory.push_back(current_state);
+	    }    
+	    current_total_distance += current_distance;
+	}
+    }    
 }
+
+// void CnewBoundingBoxPlanner::plan_and_build_discrete_phi_trajectory(SE2 & startSE2, SE2 & goalSE2)
+// { 
+//     
+//     discrete_phi_trajectory.clear();
+//     footprint_matrixes.clear();
+//     footprint_vector.clear();
+//     continuous_phi_trajectory.clear();
+//     lowerBBOXTrajectory.clear();
+//     whichlowerBBOX.clear();    
+//     
+//     // construct the manifold we are planning in    
+//     ob::StateManifoldPtr manifold(new ob::SE2StateManifold()); 
+//     
+//     ob::RealVectorBounds bounds(2); //TODO: change this, since the bounds should depend on the context.
+//     bounds.setLow(0, -3.0);
+//     bounds.setHigh(0, 1.0);
+//     bounds.setLow(1, -2.0);
+//     bounds.setHigh(1, 2.0);
+// 
+//     manifold->as<ob::SE2StateManifold>()->setBounds(bounds);
+// 
+//     ob::SpaceInformationPtr si(new ob::SpaceInformation(manifold));
+// 
+//     si->setStateValidityChecker(boost::bind(&CnewBoundingBoxPlanner::isStateValid_default, this, _1));
+//     si->setStateValidityCheckingResolution(0.03);
+//     
+//     ob::ScopedState<ob::SE2plusStateManifold> start(manifold);
+// //     start.random(); 
+//     start->setXYZ(startSE2.x,startSE2.y,0.0);
+//     start->setYaw(startSE2.theta);
+//     
+//     ob::ScopedState<ob::SE2plusStateManifold> goal(manifold);
+// //     goal.random();
+//     goal->setXYZ(goalSE2.x,goalSE2.y,0.0);
+//     goal->setYaw(goalSE2.theta);
+//     
+//     aiVector3D vtest(goal->getX(), 0.0, goal->getY());
+//     aiMatrix4x4 matr2;
+//     aiMatrix4x4::Translation(vtest, matr2);
+//     aiMatrix4x4 matr3;
+//     aiMatrix4x4::RotationY(-goal->getYaw(), matr3);    
+//     aiVector3D vscaleRIGHT( 0.5, 0.5, 1.3);
+//     aiMatrix4x4 matrRIGHT;
+//     aiMatrix4x4::Scaling(vscaleRIGHT, matrRIGHT);
+//     aiVector3D vscaleLEFT( 0.5, 0.5, 1.3);
+//     aiMatrix4x4 matrLEFT;
+//     aiMatrix4x4::Scaling(vscaleLEFT, matrLEFT);
+// 
+//     ai_zoneRightGOAL->mRootNode->mTransformation = (matr2 * matr3) * ai_zoneRightGOAL_init_matrix * matrRIGHT;
+//     ai_zoneLeftGOAL->mRootNode->mTransformation = (matr2 * matr3) * ai_zoneLeftGOAL_init_matrix * matrLEFT;   
+// 
+//     ob::ProblemDefinitionPtr pdef(new ob::ProblemDefinition(si));
+// 
+//     pdef->setStartAndGoalStates(start, goal);
+//     
+// //  ob::PlannerPtr planner(new og::KPIECE1modif(si));
+// //     ob::PlannerPtr planner(new og::BasicPRMmodif(si));
+//     ob::PlannerPtr planner(new og::RRTConnectmodif(si));
+// //     ob::PlannerPtr planner(new og::SBLmodif(si));
+// 	
+//     planner->setProblemDefinition(pdef);
+// 
+//     planner->setup();
+//     
+//     bool solved = planner->solve(30.0);
+//     
+//     if (solved)
+//     {
+//         // get the goal representation from the problem definition (not the same as the goal state)
+//         // and inquire about the found path   
+//         cout << "Found solution:" << endl;
+//         
+// 	const ob::PathPtr &path = pdef->getGoal()->getSolutionPath();
+// 	
+// 	og::PathGeometric solution_path = static_cast<og::PathGeometric&>(*path);
+// 
+// 	ob::ScopedState<ob::SE2plusStateManifold> state_curr(manifold);
+// 	cout << "length: " << solution_path.length() << endl;
+// 	for(unsigned int i = 0; i < solution_path.states.size(); i++) {	    
+// 	    state_curr = *solution_path.states[i];
+// 	    vector< float > tmpV(4);
+// 	    tmpV[0] = state_curr->getX();
+// 	    tmpV[1] = state_curr->getY();
+// 	    tmpV[2] = state_curr->getZ();
+// 	    tmpV[3] = state_curr->getYaw();
+// 	    discrete_phi_trajectory.push_back(tmpV);
+// 	}
+// 	
+// // 	og::PathSimplifier psimpl(si);
+// // 	psimpl.simplifyMax(static_cast<og::PathGeometric&>(*path));
+// 
+//         // print the path to screen
+//         path->print(cout);
+//     }
+// }
 // ----------------------------------------------------------------------------
 void CnewBoundingBoxPlanner::from_discrete_to_continuous_phi_trajectory(vector< vector<float> > & d_phi_trajectory, 
 						 vector< vector<float> > & c_phi_trajectory)

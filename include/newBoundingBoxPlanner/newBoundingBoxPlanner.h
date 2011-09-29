@@ -39,8 +39,9 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <math>
 
-#include <stdio.h>
+// #include <stdio.h>
 
 // assimp include files. These three are usually needed.
 #include "assimp.h"
@@ -141,11 +142,12 @@ class CnewBoundingBoxPlanner
 		
 // 		vector<aiMatrix4x4> footprint_matrixes;
 		
-		SE2 randomGoal(
-			    model3d & leftBbox,
-			    model3d & rightBbox,
-			    model3d & upperBbox,
-			    vector< model3d > & obstacle_list);
+		model3d leftBbox;
+		model3d rightBbox,
+		model3d upperBbox,
+		vector< model3d > obstacle_list;
+		
+		SE2 randomGoal();
 		
 // 		void plan(
 // 			    SE2 & startSE2, 
@@ -174,11 +176,7 @@ class CnewBoundingBoxPlanner
 		
 		void plan_phi_trajectory(
 			    SE2 & start_state, 
-			    SE2 & goal_state,
-			    model3d & leftBbox,
-			    model3d & rightBbox,
-			    model3d & upperBbox,
-			    vector< model3d > & obstacle_list);
+			    SE2 & goal_state);
 		
 		
 // 		void plan_phi(
@@ -272,6 +270,8 @@ class CnewBoundingBoxPlanner
 		
 		deque<SE2> leftBbox_valid_configs;
 		deque<SE2> rightBbox_valid_configs;
+		
+		float distanceQuery(model3d & object, SE2 state, vector< model3d > & list_of_obstacles);
 	    
 		SE2 phi_sampler(   
 			    //for now, SE2 is defined in newSliderPG, in halfStep_creation.h
@@ -302,19 +302,15 @@ class CnewBoundingBoxPlanner
 		
 		bool isStateValid(
 			    int number_of_attempts,
-			    SE2 & state,
-			    model3d & leftBbox,
-			    model3d & rightBbox,
-			    model3d & upperBbox,
-			    vector< model3d > & obstacle_list);
+			    SE2 & state);
 		
 		bool isStateValid(
 			    int number_of_attempts,
-			    const ob::State *state,
-			    model3d & leftBbox,
-			    model3d & rightBbox,
-			    model3d & upperBbox,
-			    vector< model3d > & obstacle_list);
+			    const ob::State *state);
+		
+		bool isStateValid_default(  
+			    const ob::State *state);
+		
 		
 // 		bool isStateValid_default(
 // 			    const ob::State *state);
